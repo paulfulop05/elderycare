@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -8,8 +8,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { availableSlots } from "@/lib/mockData";
+import { appointmentService } from "@/lib/services/appointmentService";
+import { authService } from "@/lib/services/authService";
 import { Calendar } from "@/components/ui/calendar";
+import { validateScheduleForm } from "@/lib/validation";
 import { toast } from "sonner";
 import { CalendarCheck } from "lucide-react";
 
@@ -24,6 +26,8 @@ const ScheduleDialog = ({ open, onOpenChange }: ScheduleDialogProps) => {
   const [reason, setReason] = useState("");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedTime, setSelectedTime] = useState("");
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
 
   const resetForm = () => {
     setPatientName("");
@@ -31,6 +35,8 @@ const ScheduleDialog = ({ open, onOpenChange }: ScheduleDialogProps) => {
     setReason("");
     setSelectedDate(undefined);
     setSelectedTime("");
+    setSubmitAttempted(false);
+    setTouched({});
   };
 
   const today = useMemo(() => {
@@ -64,45 +70,65 @@ const ScheduleDialog = ({ open, onOpenChange }: ScheduleDialogProps) => {
       return [];
     }
 
-    return availableSlots;
+    return appointmentService.getAvailableSlots();
   }, [selectedDate]);
 
-  useEffect(() => {
-    if (!open) {
-      resetForm();
-    }
-  }, [open]);
-
-  useEffect(() => {
-    if (!selectedTime) {
-      return;
-    }
-
-    if (!slotsForDate.includes(selectedTime)) {
-      setSelectedTime("");
-    }
-  }, [selectedTime, slotsForDate]);
+  const validation = useMemo(
+    () =>
+      validateScheduleForm({
+        patientName,
+        patientPhone,
+        reason,
+        selectedDate,
+        selectedTime,
+        availableSlots: slotsForDate,
+      }),
+    [
+      patientName,
+      patientPhone,
+      reason,
+      selectedDate,
+      selectedTime,
+      slotsForDate,
+    ],
+  );
 
   const handleDateSelect = (date: Date | undefined) => {
     setSelectedDate(date);
     setSelectedTime("");
+    setTouched((prev) => ({ ...prev, selectedDate: true, selectedTime: true }));
   };
 
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      resetForm();
+    }
+
+    onOpenChange(nextOpen);
+  };
+
+  const shouldShowError = (field: keyof typeof validation.errors): boolean =>
+    submitAttempted || Boolean(touched[field]);
+
   const handleSchedule = () => {
-    if (!patientName.trim()) {
-      toast.error("Please enter the patient name.");
+    setSubmitAttempted(true);
+
+    if (!validation.isValid) {
+      toast.error("Please correct the form errors before scheduling.");
       return;
     }
 
-    if (!selectedDate) {
-      toast.error("Please select an appointment date.");
-      return;
-    }
+    setPatientName(validation.sanitized.patientName);
+    setPatientPhone(validation.sanitized.patientPhone);
+    setReason(validation.sanitized.reason);
 
-    if (!selectedTime) {
-      toast.error("Please select an appointment time.");
-      return;
-    }
+    appointmentService.schedule({
+      doctorName: authService.getCurrentUserName(),
+      patientName: validation.sanitized.patientName,
+      date: selectedDate!.toISOString().slice(0, 10),
+      time: selectedTime,
+      reason: validation.sanitized.reason,
+    });
 
     toast.success("Appointment scheduled successfully! (prototype)");
     onOpenChange(false);
@@ -110,7 +136,7 @@ const ScheduleDialog = ({ open, onOpenChange }: ScheduleDialogProps) => {
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="bg-card border-border text-card-foreground w-[95vw] max-w-4xl">
         <DialogHeader>
           <DialogTitle className="font-display text-lg text-foreground flex items-center gap-2">
@@ -126,8 +152,17 @@ const ScheduleDialog = ({ open, onOpenChange }: ScheduleDialogProps) => {
                 placeholder="Enter patient name"
                 value={patientName}
                 onChange={(e) => setPatientName(e.target.value)}
+                onBlur={() =>
+                  setTouched((prev) => ({ ...prev, patientName: true }))
+                }
                 className="h-10 text-sm bg-muted border-border text-foreground placeholder:text-muted-foreground"
               />
+              {shouldShowError("patientName") &&
+                validation.errors.patientName && (
+                  <p className="text-xs text-destructive">
+                    {validation.errors.patientName}
+                  </p>
+                )}
             </div>
 
             <div className="space-y-1.5">
@@ -136,8 +171,17 @@ const ScheduleDialog = ({ open, onOpenChange }: ScheduleDialogProps) => {
                 placeholder="+1 555-0000"
                 value={patientPhone}
                 onChange={(e) => setPatientPhone(e.target.value)}
+                onBlur={() =>
+                  setTouched((prev) => ({ ...prev, patientPhone: true }))
+                }
                 className="h-10 text-sm bg-muted border-border text-foreground placeholder:text-muted-foreground"
               />
+              {shouldShowError("patientPhone") &&
+                validation.errors.patientPhone && (
+                  <p className="text-xs text-destructive">
+                    {validation.errors.patientPhone}
+                  </p>
+                )}
             </div>
 
             <div className="space-y-1.5">
@@ -146,8 +190,14 @@ const ScheduleDialog = ({ open, onOpenChange }: ScheduleDialogProps) => {
                 placeholder="e.g. Routine checkup, Follow-up"
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
+                onBlur={() => setTouched((prev) => ({ ...prev, reason: true }))}
                 className="h-10 text-sm bg-muted border-border text-foreground placeholder:text-muted-foreground"
               />
+              {shouldShowError("reason") && validation.errors.reason && (
+                <p className="text-xs text-destructive">
+                  {validation.errors.reason}
+                </p>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -156,6 +206,12 @@ const ScheduleDialog = ({ open, onOpenChange }: ScheduleDialogProps) => {
                 {selectedDateLabel ??
                   "Pick a date to view available time slots"}
               </div>
+              {shouldShowError("selectedDate") &&
+                validation.errors.selectedDate && (
+                  <p className="text-xs text-destructive">
+                    {validation.errors.selectedDate}
+                  </p>
+                )}
             </div>
 
             <div className="space-y-1.5">
@@ -186,10 +242,16 @@ const ScheduleDialog = ({ open, onOpenChange }: ScheduleDialogProps) => {
                   ))}
                 </div>
               )}
+              {shouldShowError("selectedTime") &&
+                validation.errors.selectedTime && (
+                  <p className="text-xs text-destructive">
+                    {validation.errors.selectedTime}
+                  </p>
+                )}
             </div>
 
             <Button
-              disabled={!patientName.trim() || !selectedDate || !selectedTime}
+              disabled={!validation.isValid}
               size="sm"
               className="w-full h-10 bg-accent text-accent-foreground font-medium hover:bg-accent/80 hover:shadow-md active:scale-[0.97] transition-all duration-200"
               onClick={handleSchedule}

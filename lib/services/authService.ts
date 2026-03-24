@@ -1,0 +1,16 @@
+import type { UserRole } from "@/lib/mockData";
+import { authRepository } from "@/lib/repositories/inMemoryRepository";
+
+export const authService = {
+  loginAs: (role: UserRole): void => {
+    authRepository.setRole(role);
+    authRepository.setLoggedIn(true);
+  },
+  logout: (): void => {
+    authRepository.clear();
+  },
+  isLoggedIn: (): boolean => authRepository.getState().loggedIn,
+  getUserRole: (): UserRole => authRepository.getState().role,
+  getCurrentUserName: (): string =>
+    authRepository.getState().role === "admin" ? "Admin" : "Dr. Maria Santos",
+};

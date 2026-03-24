@@ -22,12 +22,12 @@ import SettingsTab from "@/components/dashboard/SettingsTab";
 import AppointmentsSection from "@/components/dashboard/AppointmentsSection";
 import ScheduleDialog from "@/components/dashboard/ScheduleDialog";
 import HealthProgressQuickButton from "@/components/HealthProgressQuickButton";
-import { clearAuth, getUserRole } from "@/lib/mockData";
+import { authService } from "@/lib/services/authService";
 
 const Dashboard = () => {
   const router = useRouter();
   const { theme, toggleTheme } = useTheme();
-  const role = getUserRole();
+  const role = authService.getUserRole();
 
   const baseTabs = [
     { id: "appointments", label: "Appointments", icon: CalendarDays },
@@ -71,7 +71,7 @@ const Dashboard = () => {
               variant="ghost"
               size="icon"
               onClick={() => {
-                clearAuth();
+                authService.logout();
                 router.push("/");
               }}
               className="text-muted-foreground h-8 w-8 hover:text-destructive"

@@ -2,6 +2,10 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  validatePasswordChangeForm,
+  validateUsernameForm,
+} from "@/lib/validation";
 import { User, Lock, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -9,6 +13,50 @@ const SettingsTab = () => {
   const [section, setSection] = useState<"main" | "username" | "password">(
     "main",
   );
+  const [username, setUsername] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [usernameAttempted, setUsernameAttempted] = useState(false);
+  const [passwordAttempted, setPasswordAttempted] = useState(false);
+
+  const usernameValidation = validateUsernameForm(username);
+  const passwordValidation = validatePasswordChangeForm({
+    currentPassword,
+    newPassword,
+  });
+
+  const goToMain = () => {
+    setSection("main");
+    setUsernameAttempted(false);
+    setPasswordAttempted(false);
+  };
+
+  const handleSaveUsername = () => {
+    setUsernameAttempted(true);
+
+    if (!usernameValidation.isValid) {
+      toast.error("Please enter a valid username.");
+      return;
+    }
+
+    setUsername(usernameValidation.sanitized.username);
+    toast.success("Username updated (prototype)");
+    goToMain();
+  };
+
+  const handleSavePassword = () => {
+    setPasswordAttempted(true);
+
+    if (!passwordValidation.isValid) {
+      toast.error("Please fix the password fields before saving.");
+      return;
+    }
+
+    setCurrentPassword("");
+    setNewPassword("");
+    toast.success("Password changed (prototype)");
+    goToMain();
+  };
 
   return (
     <div className="max-w-md">
@@ -62,24 +110,29 @@ const SettingsTab = () => {
             <Input
               className="h-8 text-sm bg-muted border-border text-foreground"
               placeholder="Enter new username"
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
             />
+            {usernameAttempted && usernameValidation.errors.username && (
+              <p className="text-xs text-destructive">
+                {usernameValidation.errors.username}
+              </p>
+            )}
           </div>
           <div className="flex gap-2">
             <Button
               variant="outline"
               size="sm"
               className="border-border text-foreground"
-              onClick={() => setSection("main")}
+              onClick={goToMain}
             >
               Cancel
             </Button>
             <Button
               size="sm"
+              disabled={!usernameValidation.isValid}
               className="bg-accent text-accent-foreground hover:bg-accent/80 hover:shadow-md active:scale-[0.97] transition-all duration-200"
-              onClick={() => {
-                toast.success("Username updated (prototype)");
-                setSection("main");
-              }}
+              onClick={handleSaveUsername}
             >
               Save
             </Button>
@@ -98,7 +151,14 @@ const SettingsTab = () => {
               type="password"
               className="h-8 text-sm bg-muted border-border text-foreground"
               placeholder="••••••••"
+              value={currentPassword}
+              onChange={(event) => setCurrentPassword(event.target.value)}
             />
+            {passwordAttempted && passwordValidation.errors.currentPassword && (
+              <p className="text-xs text-destructive">
+                {passwordValidation.errors.currentPassword}
+              </p>
+            )}
           </div>
           <div className="space-y-1">
             <Label className="text-xs text-foreground">New Password</Label>
@@ -106,24 +166,29 @@ const SettingsTab = () => {
               type="password"
               className="h-8 text-sm bg-muted border-border text-foreground"
               placeholder="••••••••"
+              value={newPassword}
+              onChange={(event) => setNewPassword(event.target.value)}
             />
+            {passwordAttempted && passwordValidation.errors.newPassword && (
+              <p className="text-xs text-destructive">
+                {passwordValidation.errors.newPassword}
+              </p>
+            )}
           </div>
           <div className="flex gap-2">
             <Button
               variant="outline"
               size="sm"
               className="border-border text-foreground"
-              onClick={() => setSection("main")}
+              onClick={goToMain}
             >
               Cancel
             </Button>
             <Button
               size="sm"
+              disabled={!passwordValidation.isValid}
               className="bg-accent text-accent-foreground hover:bg-accent/80 hover:shadow-md active:scale-[0.97] transition-all duration-200"
-              onClick={() => {
-                toast.success("Password changed (prototype)");
-                setSection("main");
-              }}
+              onClick={handleSavePassword}
             >
               Save
             </Button>

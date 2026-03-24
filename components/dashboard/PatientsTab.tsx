@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { patients } from "@/lib/mockData";
+import { patientService } from "@/lib/services/patientService";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,6 +26,7 @@ const ROWS_PER_PAGE = 5;
 
 const PatientsTab = () => {
   const router = useRouter();
+  const patients = patientService.list();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
   const [viewMode, setViewMode] = useState<"table" | "visual">("table");

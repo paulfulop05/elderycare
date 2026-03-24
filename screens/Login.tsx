@@ -7,8 +7,11 @@ import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { validateLoginForm } from "@/lib/validation";
+import { toast } from "sonner";
 import Logo from "@/components/Logo";
-import { setLoggedIn, setUserRole, UserRole } from "@/lib/mockData";
+import { authService } from "@/lib/services/authService";
+import type { UserRole } from "@/lib/mockData";
 
 const Login = () => {
   const router = useRouter();
@@ -16,11 +19,28 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<UserRole>("doctor");
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [touched, setTouched] = useState<{
+    email?: boolean;
+    password?: boolean;
+  }>({});
+
+  const validation = validateLoginForm({ email, password });
+
+  const shouldShowError = (field: "email" | "password") =>
+    submitAttempted || Boolean(touched[field]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    setUserRole(role);
-    setLoggedIn(true);
+
+    setSubmitAttempted(true);
+    if (!validation.isValid) {
+      toast.error("Please fix the highlighted login fields.");
+      return;
+    }
+
+    setEmail(validation.sanitized.email);
+    authService.loginAs(role);
     router.push("/dashboard");
   };
 
@@ -76,8 +96,14 @@ const Login = () => {
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                onBlur={() => setTouched((prev) => ({ ...prev, email: true }))}
                 className="h-9 text-sm bg-muted border-border text-foreground placeholder:text-muted-foreground"
               />
+              {shouldShowError("email") && validation.errors.email && (
+                <p className="text-xs text-destructive">
+                  {validation.errors.email}
+                </p>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="password" className="text-xs text-foreground">
@@ -90,6 +116,9 @@ const Login = () => {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  onBlur={() =>
+                    setTouched((prev) => ({ ...prev, password: true }))
+                  }
                   className="h-9 text-sm bg-muted border-border text-foreground placeholder:text-muted-foreground pr-10"
                 />
                 <button
@@ -104,6 +133,11 @@ const Login = () => {
                   )}
                 </button>
               </div>
+              {shouldShowError("password") && validation.errors.password && (
+                <p className="text-xs text-destructive">
+                  {validation.errors.password}
+                </p>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs text-foreground">Log in as</Label>
@@ -134,6 +168,7 @@ const Login = () => {
             </div>
             <Button
               type="submit"
+              disabled={!validation.isValid}
               className="w-full bg-accent text-accent-foreground font-medium hover:bg-accent/80 hover:shadow-md active:scale-[0.97] transition-all duration-200"
             >
               Log In

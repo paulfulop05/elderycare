@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { doctors as initialDoctors, getUserRole } from "@/lib/mockData";
+import { authService } from "@/lib/services/authService";
+import { doctorService } from "@/lib/services/doctorService";
+import { validateDoctorForm } from "@/lib/validation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,8 +39,8 @@ const ROWS_PER_PAGE = 5;
 
 const DoctorsTab = () => {
   const router = useRouter();
-  const role = getUserRole();
-  const [doctorList, setDoctorList] = useState(initialDoctors);
+  const role = authService.getUserRole();
+  const [doctorList, setDoctorList] = useState(() => doctorService.list());
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
   const [viewMode, setViewMode] = useState<"table" | "visual">("table");
@@ -49,10 +51,13 @@ const DoctorsTab = () => {
     email: "",
     phone: "",
   });
+  const [addAttempted, setAddAttempted] = useState(false);
 
   const filtered = doctorList.filter((d) =>
     d.name.toLowerCase().includes(search.toLowerCase()),
   );
+  const addDoctorValidation = validateDoctorForm(newDoctor);
+
   const totalPages = Math.ceil(filtered.length / ROWS_PER_PAGE);
   const paginated = filtered.slice(
     page * ROWS_PER_PAGE,
@@ -60,34 +65,38 @@ const DoctorsTab = () => {
   );
 
   const handleAddDoctor = () => {
-    const name = newDoctor.name.trim();
-    if (!name) return;
-    const initials = name
-      .split(" ")
-      .filter((w) => w.length > 0)
-      .map((w) => w[0].toUpperCase())
-      .slice(0, 2)
-      .join("");
-    setDoctorList((prev) => [
-      ...prev,
-      {
-        id: String(prev.length + 1),
-        name,
-        age: parseInt(newDoctor.age) || 0,
-        email: newDoctor.email.trim(),
-        phone: newDoctor.phone.trim(),
-        avatar: initials,
-      },
-    ]);
+    setAddAttempted(true);
+
+    if (!addDoctorValidation.isValid) {
+      toast.error("Please correct the form errors before adding a doctor.");
+      return;
+    }
+
+    doctorService.add({
+      name: addDoctorValidation.sanitized.name,
+      age: addDoctorValidation.sanitized.age,
+      email: addDoctorValidation.sanitized.email,
+      phone: addDoctorValidation.sanitized.phone,
+    });
+    setDoctorList(doctorService.list());
     setNewDoctor({ name: "", age: "", email: "", phone: "" });
+    setAddAttempted(false);
     setAddOpen(false);
     toast.success("Doctor added successfully (prototype)");
   };
 
   const handleRemoveDoctor = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setDoctorList((prev) => prev.filter((d) => d.id !== id));
+    doctorService.remove(id);
+    setDoctorList(doctorService.list());
     toast.success("Doctor removed (prototype)");
+  };
+
+  const handleAddDialogChange = (nextOpen: boolean) => {
+    setAddOpen(nextOpen);
+    if (!nextOpen) {
+      setAddAttempted(false);
+    }
   };
 
   return (
@@ -298,7 +307,7 @@ const DoctorsTab = () => {
         </div>
       </div>
 
-      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+      <Dialog open={addOpen} onOpenChange={handleAddDialogChange}>
         <DialogContent className="bg-card border-border text-card-foreground max-w-md">
           <DialogHeader>
             <DialogTitle className="font-display text-base text-foreground flex items-center gap-2">
@@ -316,11 +325,18 @@ const DoctorsTab = () => {
                 }
                 className="h-9 text-sm bg-muted border-border text-foreground placeholder:text-muted-foreground"
               />
+              {addAttempted && addDoctorValidation.errors.name && (
+                <p className="text-xs text-destructive">
+                  {addDoctorValidation.errors.name}
+                </p>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs text-foreground">Age</Label>
               <Input
                 type="number"
+                min={24}
+                max={90}
                 placeholder="45"
                 value={newDoctor.age}
                 onChange={(e) =>
@@ -328,6 +344,11 @@ const DoctorsTab = () => {
                 }
                 className="h-9 text-sm bg-muted border-border text-foreground placeholder:text-muted-foreground"
               />
+              {addAttempted && addDoctorValidation.errors.age && (
+                <p className="text-xs text-destructive">
+                  {addDoctorValidation.errors.age}
+                </p>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs text-foreground">Email</Label>
@@ -340,6 +361,11 @@ const DoctorsTab = () => {
                 }
                 className="h-9 text-sm bg-muted border-border text-foreground placeholder:text-muted-foreground"
               />
+              {addAttempted && addDoctorValidation.errors.email && (
+                <p className="text-xs text-destructive">
+                  {addDoctorValidation.errors.email}
+                </p>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs text-foreground">Phone</Label>
@@ -351,9 +377,14 @@ const DoctorsTab = () => {
                 }
                 className="h-9 text-sm bg-muted border-border text-foreground placeholder:text-muted-foreground"
               />
+              {addAttempted && addDoctorValidation.errors.phone && (
+                <p className="text-xs text-destructive">
+                  {addDoctorValidation.errors.phone}
+                </p>
+              )}
             </div>
             <Button
-              disabled={!newDoctor.name.trim()}
+              disabled={!addDoctorValidation.isValid}
               size="sm"
               className="w-full bg-accent text-accent-foreground font-medium hover:bg-accent/90"
               onClick={handleAddDoctor}

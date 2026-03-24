@@ -1,56 +1,5 @@
 export type UserRole = "doctor" | "admin";
 
-const ROLE_STORAGE_KEY = "elderyCareRole";
-const AUTH_STORAGE_KEY = "elderyCareLoggedIn";
-
-const canUseStorage = () => typeof window !== "undefined";
-
-export const getUserRole = (): UserRole => {
-  if (!canUseStorage()) {
-    return "doctor";
-  }
-
-  return (localStorage.getItem(ROLE_STORAGE_KEY) as UserRole) || "doctor";
-};
-
-export const setUserRole = (role: UserRole) => {
-  if (!canUseStorage()) {
-    return;
-  }
-
-  localStorage.setItem(ROLE_STORAGE_KEY, role);
-};
-
-export const setLoggedIn = (value: boolean) => {
-  if (!canUseStorage()) {
-    return;
-  }
-
-  localStorage.setItem(AUTH_STORAGE_KEY, value ? "true" : "false");
-};
-
-export const isLoggedIn = (): boolean => {
-  if (!canUseStorage()) {
-    return false;
-  }
-
-  return localStorage.getItem(AUTH_STORAGE_KEY) === "true";
-};
-
-export const clearAuth = () => {
-  if (!canUseStorage()) {
-    return;
-  }
-
-  localStorage.removeItem(AUTH_STORAGE_KEY);
-  localStorage.removeItem(ROLE_STORAGE_KEY);
-};
-
-export const getCurrentUserName = (): string => {
-  const role = getUserRole();
-  return role === "admin" ? "Admin" : "Dr. Maria Santos";
-};
-
 export interface Doctor {
   id: string;
   name: string;

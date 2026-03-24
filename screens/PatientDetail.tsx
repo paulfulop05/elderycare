@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { patients, HealthMetrics } from "@/lib/mockData";
+import { patientService } from "@/lib/services/patientService";
+import type { HealthMetrics } from "@/lib/mockData";
+import { metricRanges, validatePatientMetrics } from "@/lib/validation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Edit, Save, X } from "lucide-react";
@@ -39,11 +41,12 @@ const PatientDetail = () => {
   const params = useParams<{ id: string }>();
   const id = params.id;
   const router = useRouter();
-  const patient = patients.find((p) => p.id === id);
+  const [patient, setPatient] = useState(() => patientService.getById(id));
   const [editing, setEditing] = useState(false);
   const [metrics, setMetrics] = useState<HealthMetrics | null>(
     patient?.metrics ?? null,
   );
+  const [saveAttempted, setSaveAttempted] = useState(false);
 
   if (!patient || !metrics) {
     return (
@@ -53,8 +56,27 @@ const PatientDetail = () => {
     );
   }
 
+  const metricValidation = validatePatientMetrics(metrics);
+
   const handleSave = () => {
+    setSaveAttempted(true);
+
+    if (!metricValidation.isValid) {
+      toast.error("Please fix invalid health metrics before saving.");
+      return;
+    }
+
+    const updatedPatient = patientService.updateMetrics(id, metrics);
+    if (!updatedPatient) {
+      toast.error("Unable to update patient metrics.");
+      return;
+    }
+
+    setPatient(updatedPatient);
+    setMetrics(updatedPatient.metrics);
+
     setEditing(false);
+    setSaveAttempted(false);
     toast.success("Metrics updated (prototype)");
   };
 
@@ -112,6 +134,7 @@ const PatientDetail = () => {
                     onClick={() => {
                       setEditing(false);
                       setMetrics(patient.metrics);
+                      setSaveAttempted(false);
                     }}
                   >
                     <X className="h-3.5 w-3.5 mr-1" /> Cancel
@@ -138,17 +161,30 @@ const PatientDetail = () => {
                   {m.label}
                 </p>
                 {editing ? (
-                  <Input
-                    type="number"
-                    value={metrics[m.key] as number}
-                    onChange={(e) =>
-                      setMetrics({
-                        ...metrics,
-                        [m.key]: parseFloat(e.target.value) || 0,
-                      })
-                    }
-                    className="h-7 text-sm bg-muted border-border text-foreground font-semibold p-1"
-                  />
+                  <div className="space-y-1">
+                    <Input
+                      type="number"
+                      min={metricRanges[m.key].min}
+                      max={metricRanges[m.key].max}
+                      step={
+                        m.key === "height" || m.key === "metabolicAge" ? 1 : 0.1
+                      }
+                      value={metrics[m.key] as number}
+                      onChange={(e) => {
+                        const parsed = parseFloat(e.target.value);
+                        setMetrics({
+                          ...metrics,
+                          [m.key]: Number.isNaN(parsed) ? 0 : parsed,
+                        });
+                      }}
+                      className="h-7 text-sm bg-muted border-border text-foreground font-semibold p-1"
+                    />
+                    {saveAttempted && metricValidation.errors[m.key] && (
+                      <p className="text-[10px] leading-tight text-destructive">
+                        {metricValidation.errors[m.key]}
+                      </p>
+                    )}
+                  </div>
                 ) : (
                   <p className="text-sm font-semibold text-foreground">
                     {metrics[m.key]}{" "}

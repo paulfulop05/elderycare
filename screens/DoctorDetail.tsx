@@ -1,7 +1,8 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { doctors, appointments } from "@/lib/mockData";
+import { doctorService } from "@/lib/services/doctorService";
+import { appointmentService } from "@/lib/services/appointmentService";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Mail, Phone, Calendar } from "lucide-react";
 import { motion } from "framer-motion";
@@ -38,7 +39,7 @@ const DoctorDetail = () => {
   const params = useParams<{ id: string }>();
   const id = params.id;
   const router = useRouter();
-  const doctor = doctors.find((d) => d.id === id);
+  const doctor = doctorService.getById(id);
 
   if (!doctor) {
     return (
@@ -48,9 +49,7 @@ const DoctorDetail = () => {
     );
   }
 
-  const doctorAppointments = appointments.filter(
-    (a) => a.doctorName === doctor.name,
-  );
+  const doctorAppointments = appointmentService.listByDoctorName(doctor.name);
 
   const stats = [
     { label: "Age", value: doctor.age.toString(), icon: Calendar },

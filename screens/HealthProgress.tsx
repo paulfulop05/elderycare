@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -8,17 +8,16 @@ import {
   TrendingDown,
   ClipboardList,
 } from "lucide-react";
-import {
-  patients,
-  appointments,
-  type Patient,
-  type Appointment,
-} from "@/lib/mockData";
+import type { Patient, Appointment } from "@/lib/mockData";
+import { appointmentService } from "@/lib/services/appointmentService";
+import { patientService } from "@/lib/services/patientService";
+import { noteService } from "@/lib/services/noteService";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { validateDoctorNote } from "@/lib/validation";
 import { cn } from "@/lib/utils";
 
 type WindowRange = {
@@ -40,8 +39,6 @@ const PERIOD_OPTIONS = [
   { label: "60d", days: 60 },
   { label: "90d", days: 90 },
 ] as const;
-
-const NOTES_STORAGE_KEY = "elderyCareHealthProgressNotes";
 
 const parseDate = (value: string) => {
   const date = new Date(`${value}T00:00:00`);
@@ -112,8 +109,12 @@ const metricDeltaWithinRange = (patient: Patient, range: WindowRange) => {
   };
 };
 
-const patientAppointmentsInRange = (patient: Patient, range: WindowRange) =>
-  appointments.filter((appointment) => {
+const patientAppointmentsInRange = (
+  patient: Patient,
+  range: WindowRange,
+  appointmentData: Appointment[],
+) =>
+  appointmentData.filter((appointment) => {
     if (appointment.patientName !== patient.name) {
       return false;
     }
@@ -121,10 +122,18 @@ const patientAppointmentsInRange = (patient: Patient, range: WindowRange) =>
     return inRange(parseDate(appointment.date), range);
   });
 
-const scorePatientInRange = (patient: Patient, range: WindowRange) => {
+const scorePatientInRange = (
+  patient: Patient,
+  range: WindowRange,
+  appointmentData: Appointment[],
+) => {
   const metric = latestMetricWithinOrBefore(patient, range);
   const metricDelta = metricDeltaWithinRange(patient, range);
-  const windowAppointments = patientAppointmentsInRange(patient, range);
+  const windowAppointments = patientAppointmentsInRange(
+    patient,
+    range,
+    appointmentData,
+  );
 
   const bmiDistance = Math.abs(metric.bmi - 24.5);
   const bmiScore = clamp(20 - bmiDistance * 2, -20, 20);
@@ -242,38 +251,39 @@ const buildExplanations = (
 
 const HealthProgress = () => {
   const router = useRouter();
+  const patients = patientService.list();
+  const appointments = appointmentService.list();
   const [periodDays, setPeriodDays] = useState<number>(30);
   const [notesByPatient, setNotesByPatient] = useState<Record<string, string>>(
-    {},
+    () => noteService.getAllByPatientId(),
   );
+  const [noteErrorsByPatient, setNoteErrorsByPatient] = useState<
+    Record<string, string>
+  >({});
 
-  useEffect(() => {
-    if (typeof window === "undefined") {
+  const handleNoteChange = (patientId: string, value: string) => {
+    const result = validateDoctorNote(value);
+    if (!result.isValid) {
+      setNoteErrorsByPatient((prev) => ({
+        ...prev,
+        [patientId]: result.error ?? "Invalid note.",
+      }));
       return;
     }
 
-    const saved = window.localStorage.getItem(NOTES_STORAGE_KEY);
-    if (!saved) {
-      return;
-    }
+    setNoteErrorsByPatient((prev) => {
+      const next = { ...prev };
+      delete next[patientId];
+      return next;
+    });
 
-    try {
-      setNotesByPatient(JSON.parse(saved) as Record<string, string>);
-    } catch {
-      setNotesByPatient({});
-    }
-  }, []);
+    setNotesByPatient((prev) => ({
+      ...prev,
+      [patientId]: result.sanitized,
+    }));
 
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    window.localStorage.setItem(
-      NOTES_STORAGE_KEY,
-      JSON.stringify(notesByPatient),
-    );
-  }, [notesByPatient]);
+    noteService.setByPatientId(patientId, result.sanitized);
+  };
 
   const insights = useMemo(() => {
     const now = new Date();
@@ -283,8 +293,12 @@ const HealthProgress = () => {
     const previousRange = rangeBefore(currentRange, periodDays);
 
     return patients.map((patient): PatientInsight => {
-      const current = scorePatientInRange(patient, currentRange);
-      const previous = scorePatientInRange(patient, previousRange);
+      const current = scorePatientInRange(patient, currentRange, appointments);
+      const previous = scorePatientInRange(
+        patient,
+        previousRange,
+        appointments,
+      );
 
       return {
         patient,
@@ -295,7 +309,7 @@ const HealthProgress = () => {
         currentAppointments: current.appointments,
       };
     });
-  }, [periodDays]);
+  }, [appointments, patients, periodDays]);
 
   const mostImproved = useMemo(
     () =>
@@ -400,13 +414,18 @@ const HealthProgress = () => {
                         placeholder="Add context for this patient"
                         value={notesByPatient[insight.patient.id] ?? ""}
                         onChange={(event) =>
-                          setNotesByPatient((prev) => ({
-                            ...prev,
-                            [insight.patient.id]: event.target.value,
-                          }))
+                          handleNoteChange(
+                            insight.patient.id,
+                            event.target.value,
+                          )
                         }
                         className="h-8 text-xs"
                       />
+                      {noteErrorsByPatient[insight.patient.id] && (
+                        <p className="text-[10px] text-destructive">
+                          {noteErrorsByPatient[insight.patient.id]}
+                        </p>
+                      )}
                     </div>
                   </div>
                 ))
@@ -466,13 +485,18 @@ const HealthProgress = () => {
                         placeholder="Add context for this patient"
                         value={notesByPatient[insight.patient.id] ?? ""}
                         onChange={(event) =>
-                          setNotesByPatient((prev) => ({
-                            ...prev,
-                            [insight.patient.id]: event.target.value,
-                          }))
+                          handleNoteChange(
+                            insight.patient.id,
+                            event.target.value,
+                          )
                         }
                         className="h-8 text-xs"
                       />
+                      {noteErrorsByPatient[insight.patient.id] && (
+                        <p className="text-[10px] text-destructive">
+                          {noteErrorsByPatient[insight.patient.id]}
+                        </p>
+                      )}
                     </div>
                   </div>
                 ))
