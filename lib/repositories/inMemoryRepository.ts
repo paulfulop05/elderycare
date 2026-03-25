@@ -10,7 +10,13 @@ import {
   type UserRole,
 } from "@/lib/mockData";
 
-const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+const clone = <T>(value: T): T => {
+  if (value === undefined || value === null) {
+    return value;
+  }
+
+  return JSON.parse(JSON.stringify(value)) as T;
+};
 
 type AuthState = {
   loggedIn: boolean;

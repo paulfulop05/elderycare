@@ -12,5 +12,5 @@ export const authService = {
   isLoggedIn: (): boolean => authRepository.getState().loggedIn,
   getUserRole: (): UserRole => authRepository.getState().role,
   getCurrentUserName: (): string =>
-    authRepository.getState().role === "admin" ? "Admin" : "Dr. Maria Santos",
+    authRepository.getState().role === "admin" ? "Admin" : "Dr. Maria",
 };
