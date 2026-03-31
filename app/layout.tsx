@@ -14,7 +14,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="h-full antialiased">
-      <body className="min-h-full flex flex-col bg-background text-foreground">
+      <body className="app-shell ambient-grid min-h-full flex flex-col bg-background text-foreground">
         <AppProviders>{children}</AppProviders>
       </body>
     </html>

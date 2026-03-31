@@ -110,6 +110,20 @@ const ScheduleDialog = ({ open, onOpenChange }: ScheduleDialogProps) => {
   const shouldShowError = (field: keyof typeof validation.errors): boolean =>
     submitAttempted || Boolean(touched[field]);
 
+  const visibleErrors = [
+    validation.errors.patientName,
+    validation.errors.patientPhone,
+    validation.errors.reason,
+    validation.errors.selectedDate,
+    validation.errors.selectedTime,
+  ].filter(Boolean) as string[];
+
+  const markPhoneAsRequiredBeforeContinuing = () => {
+    if (!validation.sanitized.patientPhone) {
+      setTouched((prev) => ({ ...prev, patientPhone: true }));
+    }
+  };
+
   const handleSchedule = () => {
     setSubmitAttempted(true);
 
@@ -190,6 +204,7 @@ const ScheduleDialog = ({ open, onOpenChange }: ScheduleDialogProps) => {
                 placeholder="e.g. Routine checkup, Follow-up"
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
+                onFocus={markPhoneAsRequiredBeforeContinuing}
                 onBlur={() => setTouched((prev) => ({ ...prev, reason: true }))}
                 className="h-10 text-sm bg-muted border-border text-foreground placeholder:text-muted-foreground"
               />
@@ -235,7 +250,10 @@ const ScheduleDialog = ({ open, onOpenChange }: ScheduleDialogProps) => {
                           ? "bg-accent text-accent-foreground shadow-sm"
                           : "border border-border bg-background text-foreground hover:bg-muted hover:border-primary/30 hover:shadow-sm active:scale-[0.97]"
                       }`}
-                      onClick={() => setSelectedTime(slot)}
+                      onClick={() => {
+                        markPhoneAsRequiredBeforeContinuing();
+                        setSelectedTime(slot);
+                      }}
                     >
                       {slot}
                     </button>
@@ -251,13 +269,28 @@ const ScheduleDialog = ({ open, onOpenChange }: ScheduleDialogProps) => {
             </div>
 
             <Button
-              disabled={!validation.isValid}
               size="sm"
               className="w-full h-10 bg-accent text-accent-foreground font-medium hover:bg-accent/80 hover:shadow-md active:scale-[0.97] transition-all duration-200"
               onClick={handleSchedule}
             >
               Confirm
             </Button>
+
+            {submitAttempted && visibleErrors.length > 0 && (
+              <div
+                role="alert"
+                className="rounded-lg border border-destructive/40 bg-destructive/10 p-3"
+              >
+                <p className="text-xs font-medium text-destructive">
+                  Please fix the following before scheduling:
+                </p>
+                <ul className="mt-1 space-y-1 text-xs text-destructive">
+                  {visibleErrors.map((error) => (
+                    <li key={error}>- {error}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
 
           <div className="space-y-1.5">
@@ -266,7 +299,10 @@ const ScheduleDialog = ({ open, onOpenChange }: ScheduleDialogProps) => {
               <Calendar
                 mode="single"
                 selected={selectedDate}
-                onSelect={handleDateSelect}
+                onSelect={(date) => {
+                  markPhoneAsRequiredBeforeContinuing();
+                  handleDateSelect(date);
+                }}
                 disabled={(date) => {
                   const normalized = new Date(date);
                   normalized.setHours(0, 0, 0, 0);

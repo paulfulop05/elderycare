@@ -7,6 +7,7 @@ import {
   ReactNode,
   useEffect,
 } from "react";
+import { browserCookieMonitorService } from "@/lib/services/browserCookieMonitorService";
 
 type Theme = "light" | "dark";
 
@@ -22,11 +23,19 @@ const ThemeContext = createContext<ThemeContextType>({
 
 export const useTheme = () => useContext(ThemeContext);
 
+const getInitialTheme = (): Theme => {
+  const storedTheme = browserCookieMonitorService.getPreference("theme");
+  return storedTheme === "light" || storedTheme === "dark"
+    ? storedTheme
+    : "dark";
+};
+
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
-  const [theme, setTheme] = useState<Theme>("dark");
+  const [theme, setTheme] = useState<Theme>(getInitialTheme);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
+    browserCookieMonitorService.setPreference("theme", theme);
   }, [theme]);
 
   const toggleTheme = () => setTheme((t) => (t === "dark" ? "light" : "dark"));

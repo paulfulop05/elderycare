@@ -45,8 +45,9 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex">
-      <div className="hidden lg:flex lg:w-1/2 bg-foreground dark:bg-card flex-col items-center justify-center p-12 relative overflow-hidden">
+    <div className="min-h-screen flex hero-fade">
+      <div className="hidden lg:flex lg:w-1/2 bg-foreground/95 dark:bg-card flex-col items-center justify-center p-12 relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,hsl(var(--accent)/0.18),transparent_48%),radial-gradient(circle_at_80%_30%,hsl(var(--primary)/0.15),transparent_45%)]" />
         <motion.div
           className="relative z-10 text-center"
           initial={{ opacity: 0, x: -20 }}
@@ -64,9 +65,9 @@ const Login = () => {
         </motion.div>
       </div>
 
-      <div className="flex-1 flex items-center justify-center p-6 bg-background">
+      <div className="flex-1 flex items-center justify-center p-4 sm:p-6 bg-background">
         <motion.div
-          className="w-full max-w-sm"
+          className="surface-card w-full max-w-sm rounded-2xl p-5 sm:p-6"
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
         >

@@ -33,10 +33,10 @@ const Landing = () => {
   const router = useRouter();
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background hero-fade">
       <section className="relative overflow-hidden bg-foreground dark:bg-background">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <nav className="flex items-center justify-between bg-white/[0.06] backdrop-blur-sm rounded-2xl px-5 py-2.5">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
+          <nav className="surface-card flex items-center justify-between rounded-2xl px-4 sm:px-5 py-2.5">
             <div className="flex items-center gap-2.5">
               <Logo size={32} />
               <span className="font-display text-lg tracking-tight">
@@ -56,7 +56,7 @@ const Landing = () => {
           </nav>
         </div>
 
-        <div className="relative z-10 max-w-7xl mx-auto px-6 py-20 md:py-28 flex flex-col items-center text-center">
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-16 md:py-24 lg:py-28 flex flex-col items-center text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -70,7 +70,7 @@ const Landing = () => {
             <p className="text-white/40 text-lg md:text-xl font-light mb-6">
               Caring for those who once cared for us.
             </p>
-            <p className="text-white/30 max-w-lg mx-auto mb-10 leading-relaxed text-sm md:text-base font-light">
+            <p className="text-white/30 max-w-xl mx-auto mb-10 leading-relaxed text-sm md:text-base font-light">
               A healthcare platform for geriatric doctors and administrators.
               Manage schedules, track patient health metrics, and deliver the
               best elderly care.
@@ -87,7 +87,7 @@ const Landing = () => {
         </div>
       </section>
 
-      <section className="py-20 px-6 max-w-5xl mx-auto">
+      <section className="py-16 sm:py-20 px-4 sm:px-6 max-w-5xl mx-auto">
         <h2 className="font-display text-2xl font-semibold text-center mb-12 text-foreground tracking-tight">
           Why <span className="text-accent">elderyCare</span>?
         </h2>
@@ -95,7 +95,7 @@ const Landing = () => {
           {features.map((f, i) => (
             <motion.div
               key={f.title}
-              className="bg-card rounded-xl p-5 border border-border hover:border-primary/30 hover:shadow-md transition-all duration-200"
+              className="surface-card lift-hover rounded-xl p-5"
               initial={{ opacity: 0, y: 15 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}

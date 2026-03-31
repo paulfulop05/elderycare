@@ -43,9 +43,9 @@ const Dashboard = () => {
   const [scheduleOpen, setScheduleOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background hero-fade">
       <header className="sticky top-0 z-10 px-4 sm:px-6 pt-3">
-        <div className="max-w-5xl mx-auto bg-card/90 backdrop-blur-md border border-border rounded-2xl px-4 py-2 flex items-center justify-between">
+        <div className="surface-card max-w-5xl mx-auto rounded-2xl px-3 sm:px-4 py-2 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <Logo size={26} />
             <span className="font-display text-sm tracking-tight hidden sm:block">
@@ -83,7 +83,7 @@ const Dashboard = () => {
       </header>
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-5">
-        <div className="flex flex-wrap items-center gap-1 mb-5">
+        <div className="surface-card flex flex-wrap items-center gap-1.5 mb-5 rounded-2xl p-2">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -91,17 +91,17 @@ const Dashboard = () => {
               className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl font-medium text-sm transition-all duration-200 ${
                 activeTab === tab.id
                   ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted hover:shadow-sm"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/80 hover:shadow-sm"
               }`}
             >
               <tab.icon className="h-3.5 w-3.5" />
               {tab.label}
             </button>
           ))}
-          <div className="flex-1" />
+          <div className="hidden sm:block flex-1" />
           <Button
             size="sm"
-            className="bg-accent text-accent-foreground font-medium hover:bg-accent/80 hover:shadow-md active:scale-[0.97] h-8 rounded-xl transition-all duration-200"
+            className="bg-accent text-accent-foreground font-medium hover:bg-accent/80 hover:shadow-md active:scale-[0.97] h-8 rounded-xl transition-all duration-200 w-full sm:w-auto"
             onClick={() => setScheduleOpen(true)}
           >
             <CalendarPlus className="h-3.5 w-3.5 mr-1.5" /> Schedule
@@ -110,9 +110,9 @@ const Dashboard = () => {
 
         <motion.div
           key={activeTab}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.2 }}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.24 }}
         >
           {activeTab === "appointments" && <AppointmentsSection />}
           {activeTab === "doctors" && <DoctorsTab />}

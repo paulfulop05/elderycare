@@ -16,6 +16,12 @@ const Consumer = () => {
 describe("ThemeContext", () => {
   beforeEach(() => {
     document.documentElement.className = "";
+    document.cookie.split(";").forEach((cookie) => {
+      const [name] = cookie.split("=");
+      if (name?.trim()) {
+        document.cookie = `${name.trim()}=; Max-Age=0; path=/`;
+      }
+    });
   });
 
   it("provides dark theme by default and toggles to light", () => {

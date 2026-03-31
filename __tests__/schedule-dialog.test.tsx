@@ -56,11 +56,33 @@ describe("ScheduleDialog", () => {
     (toast.error as jest.Mock).mockReset();
   });
 
-  it("renders date-first guidance and disabled confirm initially", () => {
+  it("renders date-first guidance and shows validation feedback on submit", () => {
     render(<ScheduleDialog open={true} onOpenChange={jest.fn()} />);
 
     expect(screen.getByText("Select a date first.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Confirm" })).toBeDisabled();
+
+    const confirm = screen.getByRole("button", { name: "Confirm" });
+    expect(confirm).toBeEnabled();
+
+    fireEvent.click(confirm);
+
+    expect(
+      screen.getByText("Please fix the following before scheduling:"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("- Phone number is required.")).toBeInTheDocument();
+    expect(toast.error).toHaveBeenCalledWith(
+      "Please correct the form errors before scheduling.",
+    );
+  });
+
+  it("shows phone validation when user jumps to reason first", () => {
+    render(<ScheduleDialog open={true} onOpenChange={jest.fn()} />);
+
+    fireEvent.focus(
+      screen.getByPlaceholderText("e.g. Routine checkup, Follow-up"),
+    );
+
+    expect(screen.getByText("Phone number is required.")).toBeInTheDocument();
   });
 
   it("schedules appointment on valid input", () => {

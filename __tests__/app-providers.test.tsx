@@ -33,6 +33,11 @@ jest.mock("@/components/ui/sonner", () => ({
   Toaster: () => <div data-testid="sonner" />,
 }));
 
+jest.mock("@/components/BrowserActivityMonitor", () => ({
+  __esModule: true,
+  default: () => <div data-testid="activity-monitor" />,
+}));
+
 describe("AppProviders", () => {
   it("wraps children with providers and renders toasters", () => {
     render(
@@ -44,6 +49,7 @@ describe("AppProviders", () => {
     expect(screen.getByTestId("query-client-provider")).toBeInTheDocument();
     expect(screen.getByTestId("theme-provider")).toBeInTheDocument();
     expect(screen.getByTestId("tooltip-provider")).toBeInTheDocument();
+    expect(screen.getByTestId("activity-monitor")).toBeInTheDocument();
     expect(screen.getByTestId("toaster")).toBeInTheDocument();
     expect(screen.getByTestId("sonner")).toBeInTheDocument();
     expect(screen.getByText("Child Content")).toBeInTheDocument();

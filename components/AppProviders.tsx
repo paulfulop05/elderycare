@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import BrowserActivityMonitor from "@/components/BrowserActivityMonitor";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 
 type AppProvidersProps = {
@@ -18,6 +19,7 @@ export default function AppProviders({ children }: AppProvidersProps) {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <TooltipProvider>
+          <BrowserActivityMonitor />
           {children}
           <Toaster />
           <Sonner />
