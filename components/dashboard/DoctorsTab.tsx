@@ -30,8 +30,6 @@ import {
   Plus,
   Trash2,
   UserPlus,
-  LayoutGrid,
-  List,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -43,7 +41,6 @@ const DoctorsTab = () => {
   const [doctorList, setDoctorList] = useState(() => doctorService.list());
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
-  const [viewMode, setViewMode] = useState<"table" | "visual">("table");
   const [addOpen, setAddOpen] = useState(false);
   const [newDoctor, setNewDoctor] = useState({
     name: "",
@@ -118,26 +115,7 @@ const DoctorsTab = () => {
               className="pl-8 h-8 text-sm bg-card border-border text-foreground placeholder:text-muted-foreground"
             />
           </div>
-          <div className="flex items-center rounded-lg border border-border bg-card p-0.5">
-            <Button
-              type="button"
-              size="sm"
-              variant={viewMode === "table" ? "default" : "ghost"}
-              onClick={() => setViewMode("table")}
-              className="h-7 px-2"
-            >
-              <List className="h-3.5 w-3.5" />
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={viewMode === "visual" ? "default" : "ghost"}
-              onClick={() => setViewMode("visual")}
-              className="h-7 px-2"
-            >
-              <LayoutGrid className="h-3.5 w-3.5" />
-            </Button>
-          </div>
+
           {role === "admin" && (
             <Button
               size="sm"
@@ -150,134 +128,75 @@ const DoctorsTab = () => {
         </div>
       </div>
 
-      {viewMode === "table" ? (
-        <div className="rounded-xl border border-border overflow-hidden bg-card">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/40">
-                <TableHead className="text-xs text-muted-foreground font-medium py-2">
-                  Name
-                </TableHead>
-                <TableHead className="text-xs text-muted-foreground font-medium py-2">
-                  Age
-                </TableHead>
-                <TableHead className="text-xs text-muted-foreground font-medium py-2">
-                  Email
-                </TableHead>
-                <TableHead className="py-2" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginated.map((d) => (
-                <TableRow
-                  key={d.id}
-                  className="hover:bg-muted/20 cursor-pointer"
-                  onClick={() => router.push(`/dashboard/doctor/${d.id}`)}
-                >
-                  <TableCell className="py-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-xs font-bold">
-                        {d.avatar}
-                      </div>
-                      <span className="text-foreground text-sm font-medium">
-                        {d.name}
-                      </span>
+      <div className="rounded-xl border border-border overflow-hidden bg-card">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/40">
+              <TableHead className="text-xs text-muted-foreground font-medium py-2">
+                Name
+              </TableHead>
+              <TableHead className="text-xs text-muted-foreground font-medium py-2">
+                Age
+              </TableHead>
+              <TableHead className="text-xs text-muted-foreground font-medium py-2">
+                Email
+              </TableHead>
+              <TableHead className="py-2" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {paginated.map((d) => (
+              <TableRow
+                key={d.id}
+                className="hover:bg-muted/20 cursor-pointer"
+                onClick={() => router.push(`/dashboard/doctor/${d.id}`)}
+              >
+                <TableCell className="py-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-xs font-bold">
+                      {d.avatar}
                     </div>
-                  </TableCell>
-                  <TableCell className="text-foreground text-sm py-2">
-                    {d.age}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-sm py-2">
-                    {d.email}
-                  </TableCell>
-                  <TableCell className="py-2">
-                    <div className="flex items-center gap-1">
+                    <span className="text-foreground text-sm font-medium">
+                      {d.name}
+                    </span>
+                  </div>
+                </TableCell>
+                <TableCell className="text-foreground text-sm py-2">
+                  {d.age}
+                </TableCell>
+                <TableCell className="text-muted-foreground text-sm py-2">
+                  {d.email}
+                </TableCell>
+                <TableCell className="py-2">
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-muted-foreground hover:text-foreground h-7 w-7 p-0"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        router.push(`/dashboard/doctor/${d.id}`);
+                      }}
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                    </Button>
+                    {role === "admin" && (
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-muted-foreground hover:text-foreground h-7 w-7 p-0"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          router.push(`/dashboard/doctor/${d.id}`);
-                        }}
+                        className="text-muted-foreground hover:text-destructive h-7 w-7 p-0"
+                        onClick={(e) => handleRemoveDoctor(d.id, e)}
                       >
-                        <Eye className="h-3.5 w-3.5" />
+                        <Trash2 className="h-3.5 w-3.5" />
                       </Button>
-                      {role === "admin" && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-muted-foreground hover:text-destructive h-7 w-7 p-0"
-                          onClick={(e) => handleRemoveDoctor(d.id, e)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {paginated.map((d) => (
-            <div
-              key={d.id}
-              className="rounded-xl border border-border bg-card p-4 cursor-pointer hover:bg-muted/20 transition-colors"
-              onClick={() => router.push(`/dashboard/doctor/${d.id}`)}
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-xs font-bold">
-                    {d.avatar}
+                    )}
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">
-                      {d.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {d.age} years old
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="text-muted-foreground hover:text-foreground h-7 w-7 p-0"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      router.push(`/dashboard/doctor/${d.id}`);
-                    }}
-                  >
-                    <Eye className="h-3.5 w-3.5" />
-                  </Button>
-                  {role === "admin" && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="text-muted-foreground hover:text-destructive h-7 w-7 p-0"
-                      onClick={(e) => handleRemoveDoctor(d.id, e)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
-                </div>
-              </div>
-              <div className="rounded-md bg-muted/40 p-2.5 text-xs">
-                <p className="text-muted-foreground">Email</p>
-                <p className="text-foreground font-medium mt-0.5 break-all">
-                  {d.email}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
 
       <div className="flex items-center justify-between mt-3">
         <p className="text-xs text-muted-foreground">

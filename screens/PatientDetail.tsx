@@ -22,20 +22,21 @@ import {
 import { toast } from "sonner";
 import HealthProgressQuickButton from "@/components/HealthProgressQuickButton";
 
-const metricKeys: { key: keyof HealthMetrics; label: string; unit: string }[] =
-  [
-    { key: "weight", label: "Weight", unit: "kg" },
-    { key: "height", label: "Height", unit: "cm" },
-    { key: "bmi", label: "BMI", unit: "" },
-    { key: "bodyFat", label: "Body Fat", unit: "%" },
-    { key: "muscleMass", label: "Muscle Mass", unit: "kg" },
-    { key: "bodyWater", label: "Body Water", unit: "%" },
-    { key: "metabolicAge", label: "Metabolic Age", unit: "yrs" },
-    { key: "leanBodyMass", label: "Lean Body Mass", unit: "kg" },
-    { key: "inorganicSalts", label: "Inorganic Salts", unit: "kg" },
-    { key: "smm", label: "SMM", unit: "kg" },
-    { key: "bfp", label: "BFP", unit: "%" },
-  ];
+type EditableMetricKey = Exclude<keyof HealthMetrics, "date">;
+
+const metricKeys: { key: EditableMetricKey; label: string; unit: string }[] = [
+  { key: "weight", label: "Weight", unit: "kg" },
+  { key: "height", label: "Height", unit: "cm" },
+  { key: "bmi", label: "BMI", unit: "" },
+  { key: "bodyFat", label: "Body Fat", unit: "%" },
+  { key: "muscleMass", label: "Muscle Mass", unit: "kg" },
+  { key: "bodyWater", label: "Body Water", unit: "%" },
+  { key: "metabolicAge", label: "Metabolic Age", unit: "yrs" },
+  { key: "leanBodyMass", label: "Lean Body Mass", unit: "kg" },
+  { key: "inorganicSalts", label: "Inorganic Salts", unit: "kg" },
+  { key: "smm", label: "SMM", unit: "kg" },
+  { key: "bfp", label: "BFP", unit: "%" },
+];
 
 const PatientDetail = () => {
   const params = useParams<{ id: string }>();

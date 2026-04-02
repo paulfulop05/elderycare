@@ -1,10 +1,19 @@
 "use client";
 
+import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { doctorService } from "@/lib/services/doctorService";
 import { appointmentService } from "@/lib/services/appointmentService";
+import { mockDataService } from "@/lib/services/mockDataService";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Mail, Phone, Calendar } from "lucide-react";
+import {
+  ArrowLeft,
+  Mail,
+  Phone,
+  Calendar,
+  RefreshCw,
+  Trash2,
+} from "lucide-react";
 import { motion } from "framer-motion";
 import {
   BarChart,
@@ -25,20 +34,104 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import HealthProgressQuickButton from "@/components/HealthProgressQuickButton";
+import { toast } from "sonner";
 
-const monthlyVisits = [
-  { month: "Oct", visits: 12 },
-  { month: "Nov", visits: 18 },
-  { month: "Dec", visits: 15 },
-  { month: "Jan", visits: 22 },
-  { month: "Feb", visits: 19 },
-  { month: "Mar", visits: 25 },
-];
+const buildMonthlyVisits = (
+  appointments: ReturnType<typeof appointmentService.listByDoctorName>,
+) => {
+  const monthFormatter = new Intl.DateTimeFormat("en-US", { month: "short" });
+  const monthKeys = Array.from({ length: 6 }, (_, offset) => {
+    const date = new Date();
+    date.setDate(1);
+    date.setMonth(date.getMonth() - (5 - offset));
+    return {
+      key: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`,
+      month: monthFormatter.format(date),
+      visits: 0,
+    };
+  });
+
+  const counts = monthKeys.reduce<Record<string, number>>((acc, item) => {
+    acc[item.key] = 0;
+    return acc;
+  }, {});
+
+  appointments.forEach((appointment) => {
+    const date = new Date(`${appointment.date}T00:00:00`);
+    if (Number.isNaN(date.getTime())) {
+      return;
+    }
+
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+    if (key in counts) {
+      counts[key] += 1;
+    }
+  });
+
+  return monthKeys.map((item) => ({
+    month: item.month,
+    visits: counts[item.key],
+  }));
+};
 
 const DoctorDetail = () => {
   const params = useParams<{ id: string }>();
   const id = params.id;
   const router = useRouter();
+  const [, setDataVersion] = useState(0);
+  const [isRandomizing, setIsRandomizing] = useState(false);
+  const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const refreshData = () => {
+    setDataVersion((value) => value + 1);
+  };
+
+  useEffect(() => {
+    if (isRandomizing) {
+      refreshIntervalRef.current = setInterval(() => {
+        refreshData();
+      }, 500);
+    } else {
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+        refreshIntervalRef.current = null;
+      }
+    }
+
+    return () => {
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+        refreshIntervalRef.current = null;
+      }
+    };
+  }, [isRandomizing]);
+
+  useEffect(() => {
+    return () => {
+      if (isRandomizing) {
+        mockDataService.stopContinuousRegeneration();
+      }
+    };
+  }, []);
+
+  const handleRandomizeData = () => {
+    if (isRandomizing) {
+      mockDataService.stopContinuousRegeneration();
+      setIsRandomizing(false);
+      toast.success("Randomization stopped.");
+    } else {
+      mockDataService.startContinuousRegeneration();
+      setIsRandomizing(true);
+      toast.success("Continuously randomizing mock data. Click to cancel.");
+    }
+  };
+
+  const handleClearData = () => {
+    mockDataService.clear();
+    refreshData();
+    toast.success("Mock data cleared.");
+  };
+
   const doctor = doctorService.getById(id);
 
   if (!doctor) {
@@ -50,6 +143,7 @@ const DoctorDetail = () => {
   }
 
   const doctorAppointments = appointmentService.listByDoctorName(doctor.name);
+  const monthlyVisits = buildMonthlyVisits(doctorAppointments);
 
   const stats = [
     { label: "Age", value: doctor.age.toString(), icon: Calendar },
@@ -69,7 +163,28 @@ const DoctorDetail = () => {
           >
             <ArrowLeft className="h-3.5 w-3.5 mr-1.5" /> Back
           </Button>
-          <HealthProgressQuickButton />
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant={isRandomizing ? "default" : "outline"}
+              className={`h-8 rounded-xl ${isRandomizing ? "border-0" : "border-border text-foreground"}`}
+              onClick={handleRandomizeData}
+            >
+              <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${isRandomizing ? "animate-spin" : ""}`} />
+              {isRandomizing ? "Stop Randomizing" : "Randomize/Add mock data"}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="border-border text-foreground h-8 rounded-xl"
+              onClick={handleClearData}
+            >
+              <Trash2 className="h-3.5 w-3.5 mr-1.5" /> Delete mock data
+            </Button>
+            <HealthProgressQuickButton />
+          </div>
         </div>
 
         <motion.div

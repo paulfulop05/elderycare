@@ -9,6 +9,10 @@ import {
   type Patient,
   type UserRole,
 } from "@/lib/mockData";
+import {
+  generateFakerMockData,
+  generateRandomAppointments,
+} from "@/lib/fakerMockData";
 
 const clone = <T>(value: T): T => {
   if (value === undefined || value === null) {
@@ -141,5 +145,26 @@ export const noteRepository = {
   }),
   setByPatientId: (patientId: string, value: string): void => {
     store.notesByPatientId[patientId] = value;
+  },
+};
+
+export const mockDataRepository = {
+  regenerate: (seed?: number): void => {
+    store.appointments = clone(
+      generateRandomAppointments(40, store.doctors, store.patients, seed),
+    );
+    store.notesByPatientId = {};
+  },
+  clear: (): void => {
+    store.appointments = [];
+    store.availableSlots = [];
+    store.notesByPatientId = {};
+  },
+  resetToSeed: (): void => {
+    store.doctors = clone(seedDoctors);
+    store.patients = clone(seedPatients);
+    store.appointments = clone(seedAppointments);
+    store.availableSlots = clone(seedAvailableSlots);
+    store.notesByPatientId = {};
   },
 };
