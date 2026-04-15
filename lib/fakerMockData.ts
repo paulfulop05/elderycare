@@ -1,10 +1,5 @@
 import { faker } from "@faker-js/faker";
-import type {
-  Appointment,
-  Doctor,
-  HealthMetrics,
-  Patient,
-} from "@/lib/mockData";
+import type { Appointment, Doctor, HealthMetrics, Patient } from "@/lib/domain";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 

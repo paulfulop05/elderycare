@@ -11,7 +11,7 @@ import { validateLoginForm } from "@/lib/validation";
 import { toast } from "sonner";
 import Logo from "@/components/Logo";
 import { authService } from "@/lib/services/authService";
-import type { UserRole } from "@/lib/mockData";
+import type { UserRole } from "@/lib/domain";
 
 const Login = () => {
   const router = useRouter();

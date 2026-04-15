@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { patientService } from "@/lib/services/patientService";
-import type { HealthMetrics } from "@/lib/mockData";
+import type { HealthMetrics } from "@/lib/domain";
 import { metricRanges, validatePatientMetrics } from "@/lib/validation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

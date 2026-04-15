@@ -1,5 +1,5 @@
-import type { UserRole } from "@/lib/mockData";
-import { authRepository } from "@/lib/repositories/inMemoryRepository";
+import type { UserRole } from "@/lib/domain";
+import { authRepository } from "@/lib/data";
 
 export const authService = {
   loginAs: (role: UserRole): void => {

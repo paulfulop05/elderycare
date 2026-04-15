@@ -1,18 +1,18 @@
+import type {
+  Appointment,
+  Doctor,
+  HealthMetrics,
+  Patient,
+  UserRole,
+} from "@/lib/domain";
 import {
-  appointments as seedAppointments,
-  availableSlots as seedAvailableSlots,
-  doctors as seedDoctors,
-  patients as seedPatients,
-  type Appointment,
-  type Doctor,
-  type HealthMetrics,
-  type Patient,
-  type UserRole,
-} from "@/lib/mockData";
-import {
-  generateFakerMockData,
   generateRandomAppointments,
-} from "@/lib/fakerMockData";
+  seedAppointments,
+  seedAvailableSlots,
+  seedDoctors,
+  seedPatients,
+} from "@/lib/data/mock";
+import type { AuthState } from "@/lib/data/contracts";
 
 const clone = <T>(value: T): T => {
   if (value === undefined || value === null) {
@@ -20,11 +20,6 @@ const clone = <T>(value: T): T => {
   }
 
   return JSON.parse(JSON.stringify(value)) as T;
-};
-
-type AuthState = {
-  loggedIn: boolean;
-  role: UserRole;
 };
 
 const store: {

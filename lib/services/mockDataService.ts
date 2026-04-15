@@ -1,4 +1,4 @@
-import { mockDataRepository } from "@/lib/repositories/inMemoryRepository";
+import { mockDataRepository } from "@/lib/data";
 
 let regenerationIntervalId: NodeJS.Timeout | null = null;
 

@@ -171,7 +171,9 @@ const DoctorDetail = () => {
               className={`h-8 rounded-xl ${isRandomizing ? "border-0" : "border-border text-foreground"}`}
               onClick={handleRandomizeData}
             >
-              <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${isRandomizing ? "animate-spin" : ""}`} />
+              <RefreshCw
+                className={`h-3.5 w-3.5 mr-1.5 ${isRandomizing ? "animate-spin" : ""}`}
+              />
               {isRandomizing ? "Stop Randomizing" : "Randomize/Add mock data"}
             </Button>
             <Button

@@ -1,4 +1,4 @@
-import { noteRepository } from "@/lib/repositories/inMemoryRepository";
+import { noteRepository } from "@/lib/data";
 
 export const noteService = {
   getAllByPatientId: (): Record<string, string> =>

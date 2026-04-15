@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { authService } from "@/lib/services/authService";
 import { appointmentService } from "@/lib/services/appointmentService";
 import { patientService } from "@/lib/services/patientService";
-import type { Appointment, HealthMetrics } from "@/lib/mockData";
+import type { Appointment, HealthMetrics } from "@/lib/domain";
 import { validatePatientMetrics } from "@/lib/validation";
 import {
   Table,

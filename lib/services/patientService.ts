@@ -1,5 +1,5 @@
-import type { HealthMetrics, Patient } from "@/lib/mockData";
-import { patientRepository } from "@/lib/repositories/inMemoryRepository";
+import type { HealthMetrics, Patient } from "@/lib/domain";
+import { patientRepository } from "@/lib/data";
 
 export const patientService = {
   list: (): Patient[] => patientRepository.getAll(),

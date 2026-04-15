@@ -1,5 +1,5 @@
-import type { Doctor } from "@/lib/mockData";
-import { doctorRepository } from "@/lib/repositories/inMemoryRepository";
+import type { Doctor } from "@/lib/domain";
+import { doctorRepository } from "@/lib/data";
 
 type NewDoctorInput = {
   name: string;

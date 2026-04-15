@@ -1,5 +1,5 @@
-import type { Appointment } from "@/lib/mockData";
-import { appointmentRepository } from "@/lib/repositories/inMemoryRepository";
+import type { Appointment } from "@/lib/domain";
+import { appointmentRepository } from "@/lib/data";
 
 type AppointmentsListener = () => void;
 

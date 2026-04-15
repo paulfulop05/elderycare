@@ -8,7 +8,7 @@ import {
   TrendingDown,
   ClipboardList,
 } from "lucide-react";
-import type { Patient, Appointment } from "@/lib/mockData";
+import type { Patient, Appointment } from "@/lib/domain";
 import { appointmentService } from "@/lib/services/appointmentService";
 import { patientService } from "@/lib/services/patientService";
 import { noteService } from "@/lib/services/noteService";

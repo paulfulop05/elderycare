@@ -1,5 +1,16 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Architecture
+
+The frontend is arranged so a backend can be added later without rewriting the UI:
+
+- `lib/domain` holds shared entity and transport types.
+- `lib/data` defines repository contracts and the current local data boundary.
+- `lib/data/mock` keeps seed data and faker generators isolated from the UI.
+- `lib/services` contains the app-facing operations used by screens and components.
+
+When you add a backend later, the cleanest swap point is the `lib/data` layer. Keep the UI and services stable, then replace the current repository implementation with an API-backed one.
+
 ## Getting Started
 
 First, run the development server:

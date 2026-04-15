@@ -1,4 +1,4 @@
-import type { HealthMetrics } from "@/lib/mockData";
+import type { HealthMetrics } from "@/lib/domain";
 
 export type ScheduleValidationInput = {
   patientName: string;
