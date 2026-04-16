@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
-import { browserCookieMonitorService } from "@/lib/services/browserCookieMonitorService";
+import { browserCookieMonitorService } from "@/lib/services/client/browserCookieMonitorService";
 
 const EVENT_THROTTLE_MS = 2000;
 

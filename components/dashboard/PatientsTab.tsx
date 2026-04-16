@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { patientService } from "@/lib/services/patientService";
+import { patientService } from "@/lib/services/client/patientService";
+import type { Patient } from "@/lib/domain";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,7 +27,9 @@ const ROWS_PER_PAGE = 5;
 
 const PatientsTab = () => {
   const router = useRouter();
-  const patients = patientService.list();
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
   const [viewMode, setViewMode] = useState<"table" | "visual">("table");
@@ -39,6 +42,26 @@ const PatientsTab = () => {
     page * ROWS_PER_PAGE,
     (page + 1) * ROWS_PER_PAGE,
   );
+
+  useEffect(() => {
+    const load = async () => {
+      setIsLoading(true);
+      setLoadError(null);
+
+      try {
+        await patientService.refresh();
+        setPatients(patientService.list());
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Failed to fetch patients.";
+        setLoadError(message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void load();
+  }, []);
 
   return (
     <div>
@@ -106,6 +129,26 @@ const PatientsTab = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
+              {isLoading && (
+                <TableRow>
+                  <TableCell
+                    colSpan={6}
+                    className="text-center text-muted-foreground text-sm py-6"
+                  >
+                    Loading patients...
+                  </TableCell>
+                </TableRow>
+              )}
+              {!isLoading && loadError && (
+                <TableRow>
+                  <TableCell
+                    colSpan={6}
+                    className="text-center text-sm py-6 text-destructive"
+                  >
+                    {loadError}
+                  </TableCell>
+                </TableRow>
+              )}
               {paginated.map((p) => (
                 <TableRow
                   key={p.id}
@@ -129,10 +172,22 @@ const PatientsTab = () => {
                     {p.lastVisit}
                   </TableCell>
                   <TableCell className="text-foreground text-sm py-2">
-                    {p.metrics.weight} kg
+                    {p.hasMetricsData ? (
+                      `${p.metrics.weight} kg`
+                    ) : (
+                      <span className="text-[11px] font-medium text-amber-700 bg-amber-100/60 px-2 py-0.5 rounded-md">
+                        No metrics yet
+                      </span>
+                    )}
                   </TableCell>
                   <TableCell className="text-foreground text-sm py-2">
-                    {p.metrics.bmi}
+                    {p.hasMetricsData ? (
+                      p.metrics.bmi
+                    ) : (
+                      <span className="text-[11px] font-medium text-amber-700 bg-amber-100/60 px-2 py-0.5 rounded-md">
+                        No data
+                      </span>
+                    )}
                   </TableCell>
                   <TableCell className="py-2">
                     <Button
@@ -150,6 +205,11 @@ const PatientsTab = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {!isLoading && loadError && (
+            <div className="rounded-xl border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
+              {loadError}
+            </div>
+          )}
           {paginated.map((p) => (
             <div
               key={p.id}
@@ -193,13 +253,25 @@ const PatientsTab = () => {
                 <div className="rounded-md bg-muted/40 p-2">
                   <p className="text-muted-foreground">Weight</p>
                   <p className="text-foreground font-medium mt-0.5">
-                    {p.metrics.weight} kg
+                    {p.hasMetricsData ? (
+                      `${p.metrics.weight} kg`
+                    ) : (
+                      <span className="text-[11px] font-medium text-amber-700 bg-amber-100/60 px-2 py-0.5 rounded-md">
+                        No metrics yet
+                      </span>
+                    )}
                   </p>
                 </div>
                 <div className="rounded-md bg-muted/40 p-2">
                   <p className="text-muted-foreground">BMI</p>
                   <p className="text-foreground font-medium mt-0.5">
-                    {p.metrics.bmi}
+                    {p.hasMetricsData ? (
+                      p.metrics.bmi
+                    ) : (
+                      <span className="text-[11px] font-medium text-amber-700 bg-amber-100/60 px-2 py-0.5 rounded-md">
+                        No data
+                      </span>
+                    )}
                   </p>
                 </div>
               </div>

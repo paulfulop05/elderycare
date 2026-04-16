@@ -1,6 +1,6 @@
-import { doctorService } from "@/lib/services/doctorService";
-import { noteService } from "@/lib/services/noteService";
-import { patientService } from "@/lib/services/patientService";
+import { doctorService } from "@/lib/services/client/doctorService";
+import { noteService } from "@/lib/services/client/noteService";
+import { patientService } from "@/lib/services/client/patientService";
 
 describe("doctorService", () => {
   it("adds doctor with generated avatar and removes doctor", () => {

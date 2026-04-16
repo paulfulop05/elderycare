@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { authService } from "@/lib/services/authService";
-import { doctorService } from "@/lib/services/doctorService";
+import { authService } from "@/lib/services/client/authService";
+import { doctorService } from "@/lib/services/client/doctorService";
 import { validateDoctorForm } from "@/lib/validation";
+import type { Doctor } from "@/lib/domain";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -38,17 +39,36 @@ const ROWS_PER_PAGE = 5;
 const DoctorsTab = () => {
   const router = useRouter();
   const role = authService.getUserRole();
-  const [doctorList, setDoctorList] = useState(() => doctorService.list());
+  const [doctorList, setDoctorList] = useState<Doctor[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
   const [addOpen, setAddOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [newDoctor, setNewDoctor] = useState({
     name: "",
     age: "",
     email: "",
     phone: "",
+    password: "",
   });
   const [addAttempted, setAddAttempted] = useState(false);
+
+  const loadDoctors = async () => {
+    try {
+      setIsLoading(true);
+      const doctors = await doctorService.list();
+      setDoctorList(doctors);
+    } catch {
+      toast.error("Failed to load doctors.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadDoctors();
+  }, []);
 
   const filtered = doctorList.filter((d) =>
     d.name.toLowerCase().includes(search.toLowerCase()),
@@ -61,7 +81,11 @@ const DoctorsTab = () => {
     (page + 1) * ROWS_PER_PAGE,
   );
 
-  const handleAddDoctor = () => {
+  const handleAddDoctor = async () => {
+    if (isSubmitting) {
+      return;
+    }
+
     setAddAttempted(true);
 
     if (!addDoctorValidation.isValid) {
@@ -69,24 +93,39 @@ const DoctorsTab = () => {
       return;
     }
 
-    doctorService.add({
-      name: addDoctorValidation.sanitized.name,
-      age: addDoctorValidation.sanitized.age,
-      email: addDoctorValidation.sanitized.email,
-      phone: addDoctorValidation.sanitized.phone,
-    });
-    setDoctorList(doctorService.list());
-    setNewDoctor({ name: "", age: "", email: "", phone: "" });
-    setAddAttempted(false);
-    setAddOpen(false);
-    toast.success("Doctor added successfully (prototype)");
+    try {
+      setIsSubmitting(true);
+      await doctorService.add({
+        name: addDoctorValidation.sanitized.name,
+        age: addDoctorValidation.sanitized.age,
+        email: addDoctorValidation.sanitized.email,
+        phone: addDoctorValidation.sanitized.phone,
+        password: addDoctorValidation.sanitized.password,
+      });
+
+      await loadDoctors();
+      setNewDoctor({ name: "", age: "", email: "", phone: "", password: "" });
+      setAddAttempted(false);
+      setAddOpen(false);
+      toast.success("Doctor account created successfully.");
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to create doctor.";
+      toast.error(message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleRemoveDoctor = (id: string, e: React.MouseEvent) => {
+  const handleRemoveDoctor = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    doctorService.remove(id);
-    setDoctorList(doctorService.list());
-    toast.success("Doctor removed (prototype)");
+    try {
+      await doctorService.remove(id);
+      await loadDoctors();
+      toast.success("Doctor removed.");
+    } catch {
+      toast.error("Failed to remove doctor.");
+    }
   };
 
   const handleAddDialogChange = (nextOpen: boolean) => {
@@ -145,6 +184,16 @@ const DoctorsTab = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
+            {isLoading && (
+              <TableRow>
+                <TableCell
+                  colSpan={4}
+                  className="text-center text-muted-foreground text-sm py-6"
+                >
+                  Loading doctors...
+                </TableCell>
+              </TableRow>
+            )}
             {paginated.map((d) => (
               <TableRow
                 key={d.id}
@@ -302,13 +351,32 @@ const DoctorsTab = () => {
                 </p>
               )}
             </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-foreground">
+                Temporary Password
+              </Label>
+              <Input
+                type="password"
+                placeholder="min 6 characters"
+                value={newDoctor.password}
+                onChange={(e) =>
+                  setNewDoctor({ ...newDoctor, password: e.target.value })
+                }
+                className="h-9 text-sm bg-muted border-border text-foreground placeholder:text-muted-foreground"
+              />
+              {addAttempted && addDoctorValidation.errors.password && (
+                <p className="text-xs text-destructive">
+                  {addDoctorValidation.errors.password}
+                </p>
+              )}
+            </div>
             <Button
-              disabled={!addDoctorValidation.isValid}
+              disabled={isSubmitting}
               size="sm"
               className="w-full bg-accent text-accent-foreground font-medium hover:bg-accent/90"
               onClick={handleAddDoctor}
             >
-              Add Doctor
+              {isSubmitting ? "Adding..." : "Add Doctor"}
             </Button>
           </div>
         </DialogContent>

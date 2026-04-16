@@ -1,5 +1,19 @@
-import { appointmentService } from "@/lib/services/appointmentService";
-import { authService } from "@/lib/services/authService";
+import { appointmentService } from "@/lib/services/client/appointmentService";
+import { authService } from "@/lib/services/client/authService";
+
+const mockJsonResponse = (data: unknown, status = 200) =>
+  ({
+    ok: status >= 200 && status < 300,
+    status,
+    json: async () => data,
+  }) as Response;
+
+const mockEmptyResponse = (status: number) =>
+  ({
+    ok: status >= 200 && status < 300,
+    status,
+    json: async () => ({}),
+  }) as Response;
 
 describe("authService", () => {
   beforeEach(() => {
@@ -20,18 +34,67 @@ describe("authService", () => {
 
     expect(authService.isLoggedIn()).toBe(false);
     expect(authService.getUserRole()).toBe("doctor");
-    expect(authService.getCurrentUserName()).toBe("Dr. Maria");
+    expect(authService.getCurrentUserName()).toBe("Doctor");
   });
 });
 
 describe("appointmentService", () => {
-  it("schedules appointment and notifies subscribers", () => {
+  const originalFetch = globalThis.fetch;
+
+  beforeEach(() => {
+    jest.restoreAllMocks();
+    (globalThis as { fetch?: jest.Mock }).fetch = jest.fn();
+  });
+
+  afterAll(() => {
+    (globalThis as { fetch?: typeof fetch }).fetch = originalFetch;
+  });
+
+  it("schedules appointment and notifies subscribers", async () => {
     const listener = jest.fn();
+
+    const fetchMock = (globalThis.fetch as jest.Mock)
+      .mockResolvedValueOnce(
+        mockJsonResponse({ appointments: [], availableSlots: ["09:00"] }),
+      )
+      .mockResolvedValueOnce(
+        mockJsonResponse({
+          id: "101",
+          doctorId: "7",
+          patientId: "1",
+          doctorName: "Dr. Maria",
+          patientName: "Test Person",
+          date: "2026-04-10",
+          time: "09:00",
+          reason: "Checkup",
+          status: "upcoming",
+        }),
+      )
+      .mockResolvedValueOnce(
+        mockJsonResponse({
+          appointments: [
+            {
+              id: "101",
+              doctorId: "7",
+              patientId: "1",
+              doctorName: "Dr. Maria",
+              patientName: "Test Person",
+              date: "2026-04-10",
+              time: "09:00",
+              reason: "Checkup",
+              status: "upcoming",
+            },
+          ],
+          availableSlots: ["09:00"],
+        }),
+      );
+
     const unsubscribe = appointmentService.subscribe(listener);
 
-    const created = appointmentService.schedule({
+    const created = await appointmentService.schedule({
       doctorName: "Dr. Maria",
       patientName: "Test Person",
+      patientPhone: "+1 555-0101",
       date: "2026-04-10",
       time: "09:00",
       reason: "Checkup",
@@ -39,33 +102,75 @@ describe("appointmentService", () => {
 
     expect(created.status).toBe("upcoming");
     expect(created.id).toBeTruthy();
-    expect(listener).toHaveBeenCalledTimes(1);
+    expect(listener).toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalled();
 
     unsubscribe();
   });
 
-  it("cancels and finishes appointments", () => {
-    const created = appointmentService.schedule({
-      doctorName: "Dr. Maria",
-      patientName: "Another Person",
-      date: "2026-04-11",
-      time: "10:00",
-      reason: "Consult",
-    });
+  it("cancels and finishes appointments", async () => {
+    (globalThis.fetch as jest.Mock)
+      .mockResolvedValueOnce(mockEmptyResponse(204))
+      .mockResolvedValueOnce(
+        mockJsonResponse({ appointments: [], availableSlots: ["10:00"] }),
+      )
+      .mockResolvedValueOnce(
+        mockJsonResponse({
+          id: "202",
+          doctorId: "7",
+          patientId: "2",
+          doctorName: "Dr. Maria",
+          patientName: "Another Person",
+          date: "2026-04-11",
+          time: "10:00",
+          reason: "Consult",
+          status: "completed",
+        }),
+      )
+      .mockResolvedValueOnce(
+        mockJsonResponse({ appointments: [], availableSlots: ["10:00"] }),
+      );
 
-    const cancelled = appointmentService.cancel(created.id);
-    expect(cancelled?.status).toBe("cancelled");
-
-    const finished = appointmentService.finish(created.id);
-    expect(finished?.status).toBe("past");
+    await expect(appointmentService.cancel("202")).resolves.toBeUndefined();
+    await expect(appointmentService.finish("202")).resolves.toEqual(
+      expect.objectContaining({ status: "completed" }),
+    );
   });
 
-  it("returns undefined for missing appointment updates", () => {
-    expect(appointmentService.cancel("missing-id")).toBeUndefined();
-    expect(appointmentService.finish("missing-id")).toBeUndefined();
+  it("returns undefined for missing appointment updates", async () => {
+    (globalThis.fetch as jest.Mock)
+      .mockResolvedValueOnce(mockEmptyResponse(404))
+      .mockResolvedValueOnce(mockEmptyResponse(404));
+
+    await expect(
+      appointmentService.cancel("missing-id"),
+    ).resolves.toBeUndefined();
+    await expect(
+      appointmentService.finish("missing-id"),
+    ).resolves.toBeUndefined();
   });
 
-  it("lists appointments and doctor-specific appointments", () => {
+  it("lists appointments and doctor-specific appointments", async () => {
+    (globalThis.fetch as jest.Mock).mockResolvedValue(
+      mockJsonResponse({
+        appointments: [
+          {
+            id: "1",
+            doctorId: "7",
+            patientId: "1",
+            doctorName: "Dr. Maria Santos",
+            patientName: "P1",
+            date: "2026-04-10",
+            time: "09:00",
+            reason: "Checkup",
+            status: "upcoming",
+          },
+        ],
+        availableSlots: ["09:00"],
+      }),
+    );
+
+    await appointmentService.refresh();
     const all = appointmentService.list();
     expect(all.length).toBeGreaterThan(0);
 
@@ -73,7 +178,15 @@ describe("appointmentService", () => {
     expect(Array.isArray(byDoctor)).toBe(true);
   });
 
-  it("returns available slots", () => {
+  it("returns available slots", async () => {
+    (globalThis.fetch as jest.Mock).mockResolvedValue(
+      mockJsonResponse({
+        appointments: [],
+        availableSlots: ["09:00", "09:30"],
+      }),
+    );
+
+    await appointmentService.refresh();
     const slots = appointmentService.getAvailableSlots();
     expect(slots.length).toBeGreaterThan(0);
   });

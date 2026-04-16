@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Eye, EyeOff } from "lucide-react";
@@ -10,16 +10,19 @@ import { Label } from "@/components/ui/label";
 import { validateLoginForm } from "@/lib/validation";
 import { toast } from "sonner";
 import Logo from "@/components/Logo";
-import { authService } from "@/lib/services/authService";
+import { authService } from "@/lib/services/client/authService";
+import { doctorService } from "@/lib/services/client/doctorService";
 import type { UserRole } from "@/lib/domain";
 
 const Login = () => {
   const router = useRouter();
+  const [hasMounted, setHasMounted] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<UserRole>("doctor");
   const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [touched, setTouched] = useState<{
     email?: boolean;
     password?: boolean;
@@ -27,10 +30,20 @@ const Login = () => {
 
   const validation = validateLoginForm({ email, password });
 
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (hasMounted && authService.isLoggedIn()) {
+      router.replace("/dashboard");
+    }
+  }, [hasMounted, router]);
+
   const shouldShowError = (field: "email" | "password") =>
     submitAttempted || Boolean(touched[field]);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
     setSubmitAttempted(true);
@@ -39,9 +52,24 @@ const Login = () => {
       return;
     }
 
-    setEmail(validation.sanitized.email);
-    authService.loginAs(role);
-    router.push("/dashboard");
+    try {
+      setIsSubmitting(true);
+      const user = await doctorService.login(
+        validation.sanitized.email,
+        password,
+        role,
+      );
+
+      setEmail(validation.sanitized.email);
+      authService.loginAs(user);
+      router.push("/dashboard");
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Login failed. Try again.";
+      toast.error(message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -169,10 +197,10 @@ const Login = () => {
             </div>
             <Button
               type="submit"
-              disabled={!validation.isValid}
+              disabled={!validation.isValid || isSubmitting}
               className="w-full bg-accent text-accent-foreground font-medium hover:bg-accent/80 hover:shadow-md active:scale-[0.97] transition-all duration-200"
             >
-              Log In
+              {isSubmitting ? "Logging in..." : "Log In"}
             </Button>
           </form>
         </motion.div>

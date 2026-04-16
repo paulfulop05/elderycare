@@ -1,7 +1,7 @@
 import {
   browserCookieMonitorService,
   type BrowserActivitySnapshot,
-} from "@/lib/services/browserCookieMonitorService";
+} from "@/lib/services/client/browserCookieMonitorService";
 
 const clearCookies = (): void => {
   document.cookie.split(";").forEach((cookie) => {

@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import { authService } from "@/lib/services/authService";
+import { authService } from "@/lib/services/client/authService";
 
 const replaceMock = jest.fn();
 
@@ -9,7 +9,7 @@ jest.mock("next/navigation", () => ({
   usePathname: () => "/dashboard",
 }));
 
-jest.mock("@/lib/services/authService", () => ({
+jest.mock("@/lib/services/client/authService", () => ({
   authService: {
     isLoggedIn: jest.fn(),
   },

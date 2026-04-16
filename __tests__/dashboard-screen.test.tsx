@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import Dashboard from "@/screens/Dashboard";
-import { authService } from "@/lib/services/authService";
+import { authService } from "@/lib/services/client/authService";
 import { useTheme } from "@/contexts/ThemeContext";
 
 const pushMock = jest.fn();
@@ -55,7 +55,7 @@ jest.mock("@/components/dashboard/ScheduleDialog", () => ({
   ),
 }));
 
-jest.mock("@/lib/services/authService", () => ({
+jest.mock("@/lib/services/client/authService", () => ({
   authService: {
     getUserRole: jest.fn(() => roleMock),
     logout: jest.fn(() => logoutMock()),

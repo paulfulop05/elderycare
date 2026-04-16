@@ -1,19 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { doctorService } from "@/lib/services/doctorService";
-import { appointmentService } from "@/lib/services/appointmentService";
-import { mockDataService } from "@/lib/services/mockDataService";
+import type { Doctor } from "@/lib/domain";
+import { doctorService } from "@/lib/services/client/doctorService";
+import { appointmentService } from "@/lib/services/client/appointmentService";
 import { Button } from "@/components/ui/button";
-import {
-  ArrowLeft,
-  Mail,
-  Phone,
-  Calendar,
-  RefreshCw,
-  Trash2,
-} from "lucide-react";
+import { ArrowLeft, Mail, Phone, Calendar } from "lucide-react";
 import { motion } from "framer-motion";
 import {
   BarChart,
@@ -78,61 +71,58 @@ const DoctorDetail = () => {
   const params = useParams<{ id: string }>();
   const id = params.id;
   const router = useRouter();
-  const [, setDataVersion] = useState(0);
-  const [isRandomizing, setIsRandomizing] = useState(false);
-  const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  const refreshData = () => {
-    setDataVersion((value) => value + 1);
-  };
+  const [doctor, setDoctor] = useState<Doctor | null>(null);
+  const [isDoctorLoading, setIsDoctorLoading] = useState(true);
+  const [doctorAppointments, setDoctorAppointments] = useState(() =>
+    appointmentService.listByDoctorId(id),
+  );
 
   useEffect(() => {
-    if (isRandomizing) {
-      refreshIntervalRef.current = setInterval(() => {
-        refreshData();
-      }, 500);
-    } else {
-      if (refreshIntervalRef.current) {
-        clearInterval(refreshIntervalRef.current);
-        refreshIntervalRef.current = null;
-      }
-    }
+    let isMounted = true;
 
-    return () => {
-      if (refreshIntervalRef.current) {
-        clearInterval(refreshIntervalRef.current);
-        refreshIntervalRef.current = null;
+    const loadDoctor = async () => {
+      try {
+        setIsDoctorLoading(true);
+        const loadedDoctor = await doctorService.getById(id);
+        if (isMounted) {
+          setDoctor(loadedDoctor ?? null);
+        }
+      } catch {
+        if (isMounted) {
+          setDoctor(null);
+          toast.error("Failed to load doctor details.");
+        }
+      } finally {
+        if (isMounted) {
+          setIsDoctorLoading(false);
+        }
       }
     };
-  }, [isRandomizing]);
+
+    void loadDoctor();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [id]);
 
   useEffect(() => {
-    return () => {
-      if (isRandomizing) {
-        mockDataService.stopContinuousRegeneration();
-      }
-    };
-  }, []);
+    const unsubscribe = appointmentService.subscribe(() => {
+      setDoctorAppointments(appointmentService.listByDoctorId(id));
+    });
 
-  const handleRandomizeData = () => {
-    if (isRandomizing) {
-      mockDataService.stopContinuousRegeneration();
-      setIsRandomizing(false);
-      toast.success("Randomization stopped.");
-    } else {
-      mockDataService.startContinuousRegeneration();
-      setIsRandomizing(true);
-      toast.success("Continuously randomizing mock data. Click to cancel.");
-    }
-  };
+    void appointmentService.refresh();
 
-  const handleClearData = () => {
-    mockDataService.clear();
-    refreshData();
-    toast.success("Mock data cleared.");
-  };
+    return unsubscribe;
+  }, [id]);
 
-  const doctor = doctorService.getById(id);
+  if (isDoctorLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">Loading doctor...</p>
+      </div>
+    );
+  }
 
   if (!doctor) {
     return (
@@ -142,8 +132,10 @@ const DoctorDetail = () => {
     );
   }
 
-  const doctorAppointments = appointmentService.listByDoctorName(doctor.name);
-  const monthlyVisits = buildMonthlyVisits(doctorAppointments);
+  const completedDoctorAppointments = doctorAppointments.filter(
+    (appointment) => appointment.status === "completed",
+  );
+  const monthlyVisits = buildMonthlyVisits(completedDoctorAppointments);
 
   const stats = [
     { label: "Age", value: doctor.age.toString(), icon: Calendar },
@@ -163,30 +155,7 @@ const DoctorDetail = () => {
           >
             <ArrowLeft className="h-3.5 w-3.5 mr-1.5" /> Back
           </Button>
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant={isRandomizing ? "default" : "outline"}
-              className={`h-8 rounded-xl ${isRandomizing ? "border-0" : "border-border text-foreground"}`}
-              onClick={handleRandomizeData}
-            >
-              <RefreshCw
-                className={`h-3.5 w-3.5 mr-1.5 ${isRandomizing ? "animate-spin" : ""}`}
-              />
-              {isRandomizing ? "Stop Randomizing" : "Randomize/Add mock data"}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="border-border text-foreground h-8 rounded-xl"
-              onClick={handleClearData}
-            >
-              <Trash2 className="h-3.5 w-3.5 mr-1.5" /> Delete mock data
-            </Button>
-            <HealthProgressQuickButton />
-          </div>
+          <HealthProgressQuickButton />
         </div>
 
         <motion.div
@@ -249,7 +218,12 @@ const DoctorDetail = () => {
                     stroke="hsl(0,0%,40%)"
                     tick={{ fontSize: 11 }}
                   />
-                  <YAxis stroke="hsl(0,0%,40%)" tick={{ fontSize: 11 }} />
+                  <YAxis
+                    stroke="hsl(0,0%,40%)"
+                    tick={{ fontSize: 11 }}
+                    domain={[0, 25]}
+                    ticks={[0, 5, 10, 15, 20, 25]}
+                  />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: "hsl(0,0%,9%)",
@@ -284,7 +258,7 @@ const DoctorDetail = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {doctorAppointments.length === 0 ? (
+                    {completedDoctorAppointments.length === 0 ? (
                       <TableRow>
                         <TableCell
                           colSpan={3}
@@ -294,7 +268,7 @@ const DoctorDetail = () => {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      doctorAppointments.map((a) => (
+                      completedDoctorAppointments.map((a) => (
                         <TableRow key={a.id}>
                           <TableCell className="text-foreground text-sm py-2">
                             {a.patientName}
@@ -306,16 +280,9 @@ const DoctorDetail = () => {
                             </span>
                           </TableCell>
                           <TableCell className="py-2">
-                            <Badge
-                              variant={
-                                a.status === "upcoming"
-                                  ? "default"
-                                  : "secondary"
-                              }
-                              className="text-xs"
-                            >
-                              {a.status}
-                            </Badge>
+                            <span className="text-sm text-muted-foreground">
+                              {a.reason}
+                            </span>
                           </TableCell>
                         </TableRow>
                       ))

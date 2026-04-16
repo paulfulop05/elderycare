@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -8,8 +8,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { appointmentService } from "@/lib/services/appointmentService";
-import { authService } from "@/lib/services/authService";
+import { appointmentService } from "@/lib/services/client/appointmentService";
+import { authService } from "@/lib/services/client/authService";
 import { Calendar } from "@/components/ui/calendar";
 import { validateScheduleForm } from "@/lib/validation";
 import { toast } from "sonner";
@@ -28,6 +28,9 @@ const ScheduleDialog = ({ open, onOpenChange }: ScheduleDialogProps) => {
   const [selectedTime, setSelectedTime] = useState("");
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const patientNameInputRef = useRef<HTMLInputElement | null>(null);
+  const patientPhoneInputRef = useRef<HTMLInputElement | null>(null);
+  const reasonInputRef = useRef<HTMLInputElement | null>(null);
 
   const resetForm = () => {
     setPatientName("");
@@ -44,6 +47,16 @@ const ScheduleDialog = ({ open, onOpenChange }: ScheduleDialogProps) => {
     now.setHours(0, 0, 0, 0);
     return now;
   }, []);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      patientNameInputRef.current?.focus();
+    });
+  }, [open]);
 
   const selectedDateLabel = useMemo(() => {
     if (!selectedDate) {
@@ -124,7 +137,17 @@ const ScheduleDialog = ({ open, onOpenChange }: ScheduleDialogProps) => {
     }
   };
 
-  const handleSchedule = () => {
+  const focusNextInput = (
+    event: React.KeyboardEvent<HTMLInputElement>,
+    next: HTMLInputElement | null,
+  ) => {
+    if (event.key === "Tab" && !event.shiftKey && next) {
+      event.preventDefault();
+      next.focus();
+    }
+  };
+
+  const handleSchedule = async () => {
     setSubmitAttempted(true);
 
     if (!validation.isValid) {
@@ -136,15 +159,31 @@ const ScheduleDialog = ({ open, onOpenChange }: ScheduleDialogProps) => {
     setPatientPhone(validation.sanitized.patientPhone);
     setReason(validation.sanitized.reason);
 
-    appointmentService.schedule({
-      doctorName: authService.getCurrentUserName(),
-      patientName: validation.sanitized.patientName,
-      date: selectedDate!.toISOString().slice(0, 10),
-      time: selectedTime,
-      reason: validation.sanitized.reason,
-    });
+    const currentUser = authService.getCurrentUser();
 
-    toast.success("Appointment scheduled successfully! (prototype)");
+    try {
+      await appointmentService.schedule({
+        doctorId:
+          currentUser && currentUser.did > 0
+            ? String(currentUser.did)
+            : undefined,
+        doctorName: currentUser?.name ?? authService.getCurrentUserName(),
+        patientName: validation.sanitized.patientName,
+        patientPhone: validation.sanitized.patientPhone,
+        date: selectedDate!.toISOString().slice(0, 10),
+        time: selectedTime,
+        reason: validation.sanitized.reason,
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to schedule appointment.";
+      toast.error(message);
+      return;
+    }
+
+    toast.success("Appointment scheduled successfully.");
     onOpenChange(false);
     resetForm();
   };
@@ -163,9 +202,15 @@ const ScheduleDialog = ({ open, onOpenChange }: ScheduleDialogProps) => {
             <div className="space-y-1.5">
               <Label className="text-xs text-foreground">Patient Name</Label>
               <Input
+                ref={patientNameInputRef}
+                autoFocus={open}
                 placeholder="Enter patient name"
                 value={patientName}
                 onChange={(e) => setPatientName(e.target.value)}
+                onPointerDown={(event) => event.currentTarget.focus()}
+                onKeyDown={(event) =>
+                  focusNextInput(event, patientPhoneInputRef.current)
+                }
                 onBlur={() =>
                   setTouched((prev) => ({ ...prev, patientName: true }))
                 }
@@ -182,9 +227,14 @@ const ScheduleDialog = ({ open, onOpenChange }: ScheduleDialogProps) => {
             <div className="space-y-1.5">
               <Label className="text-xs text-foreground">Patient Phone</Label>
               <Input
+                ref={patientPhoneInputRef}
                 placeholder="+1 555-0000"
                 value={patientPhone}
                 onChange={(e) => setPatientPhone(e.target.value)}
+                onPointerDown={(event) => event.currentTarget.focus()}
+                onKeyDown={(event) =>
+                  focusNextInput(event, reasonInputRef.current)
+                }
                 onBlur={() =>
                   setTouched((prev) => ({ ...prev, patientPhone: true }))
                 }
@@ -201,10 +251,11 @@ const ScheduleDialog = ({ open, onOpenChange }: ScheduleDialogProps) => {
             <div className="space-y-1.5">
               <Label className="text-xs text-foreground">Reason</Label>
               <Input
+                ref={reasonInputRef}
                 placeholder="e.g. Routine checkup, Follow-up"
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                onFocus={markPhoneAsRequiredBeforeContinuing}
+                onPointerDown={(event) => event.currentTarget.focus()}
                 onBlur={() => setTouched((prev) => ({ ...prev, reason: true }))}
                 className="h-10 text-sm bg-muted border-border text-foreground placeholder:text-muted-foreground"
               />

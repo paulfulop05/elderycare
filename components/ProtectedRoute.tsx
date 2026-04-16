@@ -1,9 +1,9 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { authService } from "@/lib/services/authService";
+import { authService } from "@/lib/services/client/authService";
 
 type ProtectedRouteProps = {
   children: ReactNode;
@@ -12,18 +12,24 @@ type ProtectedRouteProps = {
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const router = useRouter();
   const pathname = usePathname();
-  const authorized = authService.isLoggedIn();
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    if (!authorized) {
+    setMounted(true);
+  }, []);
+
+  const authorized = mounted && authService.isLoggedIn();
+
+  useEffect(() => {
+    if (mounted && !authorized) {
       const redirectTarget = pathname
         ? `?from=${encodeURIComponent(pathname)}`
         : "";
       router.replace(`/login${redirectTarget}`);
     }
-  }, [authorized, pathname, router]);
+  }, [authorized, mounted, pathname, router]);
 
-  if (authorized !== true) {
+  if (!mounted || authorized !== true) {
     return null;
   }
 

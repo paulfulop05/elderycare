@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { authService } from "@/lib/services/authService";
-import { appointmentService } from "@/lib/services/appointmentService";
-import { patientService } from "@/lib/services/patientService";
+import { authService } from "@/lib/services/client/authService";
+import { appointmentService } from "@/lib/services/client/appointmentService";
+import { patientService } from "@/lib/services/client/patientService";
 import type { Appointment, HealthMetrics } from "@/lib/domain";
 import { validatePatientMetrics } from "@/lib/validation";
 import {
@@ -70,7 +70,7 @@ const AppointmentTable = ({
   onFinish,
   onCancel,
 }: AppointmentTableProps) => (
-  <div className="rounded-xl border border-border overflow-hidden bg-card">
+  <div className="w-full rounded-xl border border-border overflow-hidden bg-card">
     <Table>
       <TableHeader>
         <TableRow className="bg-muted/40">
@@ -93,7 +93,7 @@ const AppointmentTable = ({
         {items.length === 0 ? (
           <TableRow>
             <TableCell
-              colSpan={5}
+              colSpan={showActions ? 5 : 4}
               className="text-center text-muted-foreground py-8 text-sm"
             >
               No appointments
@@ -145,7 +145,7 @@ const AppointmentTable = ({
 );
 
 const AppointmentsSection = () => {
-  const userName = authService.getCurrentUserName();
+  const currentDoctorId = authService.getCurrentDoctorId();
   const [data, setData] = useState(() => appointmentService.list());
   const [finishOpen, setFinishOpen] = useState(false);
   const [finishingId, setFinishingId] = useState<string | null>(null);
@@ -173,16 +173,24 @@ const AppointmentsSection = () => {
     [metrics],
   );
 
-  const userAppointments = data.filter((a) => {
-    if (a.status === "cancelled") return false;
-    return a.doctorName === userName;
+  const userAppointments = data.filter((appointment) => {
+    if (!currentDoctorId) {
+      return false;
+    }
+
+    return appointment.doctorId === currentDoctorId;
   });
 
   const upcoming = userAppointments.filter((a) => a.status === "upcoming");
-  const past = userAppointments.filter((a) => a.status === "past");
+  const past = userAppointments.filter((a) => a.status === "completed");
 
-  const cancelAppointment = (id: string) => {
-    appointmentService.cancel(id);
+  const cancelAppointment = async (id: string) => {
+    try {
+      await appointmentService.cancel(id);
+      toast.success("Appointment cancelled.");
+    } catch {
+      toast.error("Failed to cancel appointment.");
+    }
   };
 
   const openFinishDialog = (id: string) => {
@@ -193,7 +201,7 @@ const AppointmentsSection = () => {
     setFinishOpen(true);
   };
 
-  const handleFinish = () => {
+  const handleFinish = async () => {
     if (!finishingId) return;
     setFinishAttempted(true);
 
@@ -203,21 +211,22 @@ const AppointmentsSection = () => {
     }
 
     const appointment = data.find((item) => item.id === finishingId);
-    if (appointment) {
-      const patient = patientService
-        .list()
-        .find((item) => item.name === appointment.patientName);
 
-      if (patient) {
-        patientService.updateMetrics(patient.id, {
+    try {
+      if (appointment?.patientId) {
+        await patientService.updateMetrics(appointment.patientId, {
           ...metrics,
-          date: new Date().toISOString().slice(0, 10),
+          date: appointment.date,
         });
       }
+
+      await appointmentService.finish(finishingId);
+      toast.success("Appointment completed and patient data saved.");
+    } catch {
+      toast.error("Failed to complete appointment.");
+      return;
     }
 
-    appointmentService.finish(finishingId);
-    toast.success("Appointment completed & patient data recorded (prototype)");
     setFinishOpen(false);
     setFinishingId(null);
     setFinishAttempted(false);
@@ -225,8 +234,8 @@ const AppointmentsSection = () => {
   };
 
   return (
-    <div className="grid md:grid-cols-2 gap-4 mb-6">
-      <div>
+    <div className="w-full space-y-4 mb-6">
+      <div className="w-full">
         <div className="flex items-center gap-2 mb-2">
           <h3 className="font-display text-sm font-semibold text-foreground">
             Upcoming
@@ -242,7 +251,7 @@ const AppointmentsSection = () => {
           onCancel={cancelAppointment}
         />
       </div>
-      <div>
+      <div className="w-full">
         <div className="flex items-center gap-2 mb-2">
           <h3 className="font-display text-sm font-semibold text-foreground">
             Past

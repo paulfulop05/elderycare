@@ -1,0 +1,89 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Doctor {
+  did         Int      @id @default(autoincrement())
+  name        String
+  email       String @unique
+  password    String
+  role        Boolean @default(false) 
+  phoneNumber String
+  age         Int
+  appointments Appointment[]
+}
+
+model Patient {
+  pid           Int @id @default(autoincrement())
+  name          String
+  phoneNumber   String
+  doctorNote    String?
+  lastVisit     DateTime?
+  age           Int
+  healthMetrics HealthMetrics?
+  healthMetricsHistory HealthMetricsHistory[]
+  appointments Appointment[]
+  
+  @@unique([name, phoneNumber])
+}
+
+model Appointment {
+  aid          Int      @id @default(autoincrement())
+  date         DateTime
+  reason       String
+  status       String   @default("upcoming")
+
+  doctor       Doctor   @relation(fields: [doctorId], references: [did])
+  patient      Patient  @relation(fields: [patientId], references: [pid])
+  doctorId     Int
+  patientId    Int
+}
+
+model HealthMetrics {
+  hmid            Int      @id @default(autoincrement())
+  weight          Float    @db.Real
+  height          Float    @db.Real
+  BMI             Float    @db.Real
+  bodyFat         Float    @db.Real
+  muscleMass      Float    @db.Real
+  bodyWater       Float    @db.Real
+  metabolicAge    Float    @db.Real
+  leanBodyMass    Float    @db.Real
+  inorganicSalts  Float    @db.Real
+  SMM             Float    @db.Real
+  BFP             Float    @db.Real
+
+  patient         Patient @relation(fields: [patientId], references: [pid])
+  patientId       Int @unique
+}
+
+model HealthMetricsHistory {
+  hmhid           Int      @id @default(autoincrement())
+  recordedAt      DateTime @default(now())
+  weight          Float    @db.Real
+  height          Float    @db.Real
+  BMI             Float    @db.Real
+  bodyFat         Float    @db.Real
+  muscleMass      Float    @db.Real
+  bodyWater       Float    @db.Real
+  metabolicAge    Float    @db.Real
+  leanBodyMass    Float    @db.Real
+  inorganicSalts  Float    @db.Real
+  SMM             Float    @db.Real
+  BFP             Float    @db.Real
+
+  patient         Patient  @relation(fields: [patientId], references: [pid])
+  patientId       Int
+
+  @@index([patientId, recordedAt])
+}

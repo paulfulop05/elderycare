@@ -1,7 +1,7 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import AppointmentsSection from "@/components/dashboard/AppointmentsSection";
-import { appointmentService } from "@/lib/services/appointmentService";
-import { patientService } from "@/lib/services/patientService";
+import { appointmentService } from "@/lib/services/client/appointmentService";
+import { patientService } from "@/lib/services/client/patientService";
 import { validatePatientMetrics } from "@/lib/validation";
 import { toast } from "sonner";
 
@@ -94,13 +94,15 @@ jest.mock("@/components/ui/dialog", () => ({
   ),
 }));
 
-jest.mock("@/lib/services/authService", () => ({
+jest.mock("@/lib/services/client/authService", () => ({
   authService: {
+    getUserRole: jest.fn(() => "doctor"),
+    getCurrentDoctorId: jest.fn(() => "d1"),
     getCurrentUserName: jest.fn(() => "Dr. Maria"),
   },
 }));
 
-jest.mock("@/lib/services/appointmentService", () => ({
+jest.mock("@/lib/services/client/appointmentService", () => ({
   appointmentService: {
     list: jest.fn(() => listMock()),
     subscribe: jest.fn((listener: () => void) => subscribeMock(listener)),
@@ -109,7 +111,7 @@ jest.mock("@/lib/services/appointmentService", () => ({
   },
 }));
 
-jest.mock("@/lib/services/patientService", () => ({
+jest.mock("@/lib/services/client/patientService", () => ({
   patientService: {
     list: jest.fn(() => [{ id: "p1", name: "Patient One" }]),
     updateMetrics: jest.fn((id: string, metrics: unknown) =>
@@ -144,6 +146,8 @@ describe("AppointmentsSection", () => {
     listMock.mockReturnValue([
       {
         id: "a1",
+        doctorId: "d1",
+        patientId: "p1",
         doctorName: "Dr. Maria",
         patientName: "Patient One",
         date: "2026-04-01",
@@ -153,26 +157,19 @@ describe("AppointmentsSection", () => {
       },
       {
         id: "a2",
+        doctorId: "d1",
+        patientId: "p1",
         doctorName: "Dr. Maria",
         patientName: "Patient One",
         date: "2026-03-01",
         time: "10:00",
         reason: "Follow up",
-        status: "past",
-      },
-      {
-        id: "a3",
-        doctorName: "Dr. Maria",
-        patientName: "Patient One",
-        date: "2026-03-05",
-        time: "11:00",
-        reason: "Cancelled",
-        status: "cancelled",
+        status: "completed",
       },
     ]);
   });
 
-  it("renders upcoming and past lists and supports cancel", () => {
+  it("renders upcoming and past lists and supports cancel", async () => {
     (validatePatientMetrics as jest.Mock).mockReturnValue({
       isValid: false,
       errors: { weight: "invalid" },
@@ -181,11 +178,11 @@ describe("AppointmentsSection", () => {
 
     expect(screen.getByText("Upcoming")).toBeInTheDocument();
     expect(screen.getByText("Past")).toBeInTheDocument();
-    expect(screen.queryByText("Cancelled")).not.toBeInTheDocument();
-
     const buttons = screen.getAllByRole("button");
     fireEvent.click(buttons[1]);
-    expect(appointmentService.cancel).toHaveBeenCalledWith("a1");
+    await waitFor(() => {
+      expect(appointmentService.cancel).toHaveBeenCalledWith("a1");
+    });
   });
 
   it("shows validation error when finishing with invalid metrics", () => {
@@ -206,7 +203,7 @@ describe("AppointmentsSection", () => {
     expect(appointmentService.finish).not.toHaveBeenCalled();
   });
 
-  it("finishes appointment and updates patient metrics when valid", () => {
+  it("finishes appointment and updates patient metrics when valid", async () => {
     (validatePatientMetrics as jest.Mock).mockReturnValue({
       isValid: true,
       errors: {},
@@ -218,15 +215,16 @@ describe("AppointmentsSection", () => {
       screen.getByRole("button", { name: "Complete & Save Patient Data" }),
     );
 
-    expect(patientService.list).toHaveBeenCalled();
-    expect(patientService.updateMetrics).toHaveBeenCalledWith(
-      "p1",
-      expect.objectContaining({ date: expect.any(String) }),
-    );
-    expect(appointmentService.finish).toHaveBeenCalledWith("a1");
-    expect(toast.success).toHaveBeenCalledWith(
-      "Appointment completed & patient data recorded (prototype)",
-    );
+    await waitFor(() => {
+      expect(patientService.updateMetrics).toHaveBeenCalledWith(
+        "p1",
+        expect.objectContaining({ date: "2026-04-01" }),
+      );
+      expect(appointmentService.finish).toHaveBeenCalledWith("a1");
+      expect(toast.success).toHaveBeenCalledWith(
+        "Appointment completed and patient data saved.",
+      );
+    });
   });
 
   it("unsubscribes on unmount", () => {

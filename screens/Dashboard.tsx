@@ -22,7 +22,7 @@ import SettingsTab from "@/components/dashboard/SettingsTab";
 import AppointmentsSection from "@/components/dashboard/AppointmentsSection";
 import ScheduleDialog from "@/components/dashboard/ScheduleDialog";
 import HealthProgressQuickButton from "@/components/HealthProgressQuickButton";
-import { authService } from "@/lib/services/authService";
+import { authService } from "@/lib/services/client/authService";
 
 const Dashboard = () => {
   const router = useRouter();

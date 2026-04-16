@@ -1,6 +1,7 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import Login from "@/screens/Login";
-import { authService } from "@/lib/services/authService";
+import { authService } from "@/lib/services/client/authService";
+import { doctorService } from "@/lib/services/client/doctorService";
 import { toast } from "sonner";
 
 const pushMock = jest.fn();
@@ -20,9 +21,16 @@ jest.mock("@/components/Logo", () => ({
   default: () => <div>Logo</div>,
 }));
 
-jest.mock("@/lib/services/authService", () => ({
+jest.mock("@/lib/services/client/authService", () => ({
   authService: {
+    isLoggedIn: jest.fn(() => false),
     loginAs: jest.fn(),
+  },
+}));
+
+jest.mock("@/lib/services/client/doctorService", () => ({
+  doctorService: {
+    login: jest.fn(),
   },
 }));
 
@@ -38,6 +46,13 @@ describe("Login screen", () => {
   beforeEach(() => {
     pushMock.mockReset();
     (authService.loginAs as jest.Mock).mockReset();
+    (doctorService.login as jest.Mock).mockReset();
+    (doctorService.login as jest.Mock).mockResolvedValue({
+      did: 11,
+      name: "Doctor One",
+      email: "doctor@care.com",
+      role: "admin",
+    });
     (toast.error as jest.Mock).mockReset();
   });
 
@@ -67,7 +82,7 @@ describe("Login screen", () => {
     ).toBeInTheDocument();
   });
 
-  it("logs in as selected role and routes to dashboard", () => {
+  it("logs in as selected role and routes to dashboard", async () => {
     render(<Login />);
 
     fireEvent.change(screen.getByLabelText("Email"), {
@@ -79,7 +94,20 @@ describe("Login screen", () => {
     fireEvent.click(screen.getByRole("button", { name: "Admin" }));
     fireEvent.click(screen.getByRole("button", { name: "Log In" }));
 
-    expect(authService.loginAs).toHaveBeenCalledWith("admin");
+    await waitFor(() => {
+      expect(doctorService.login).toHaveBeenCalledWith(
+        "user@mail.com",
+        "123456",
+        "admin",
+      );
+    });
+
+    expect(authService.loginAs).toHaveBeenCalledWith({
+      did: 11,
+      name: "Doctor One",
+      email: "doctor@care.com",
+      role: "admin",
+    });
     expect(pushMock).toHaveBeenCalledWith("/dashboard");
     expect(toast.error).not.toHaveBeenCalled();
   });

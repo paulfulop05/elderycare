@@ -1,7 +1,7 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import ScheduleDialog from "@/components/dashboard/ScheduleDialog";
-import { appointmentService } from "@/lib/services/appointmentService";
-import { authService } from "@/lib/services/authService";
+import { appointmentService } from "@/lib/services/client/appointmentService";
+import { authService } from "@/lib/services/client/authService";
 import { toast } from "sonner";
 
 jest.mock("@/components/ui/dialog", () => ({
@@ -22,22 +22,33 @@ jest.mock("@/components/ui/calendar", () => ({
   Calendar: ({ onSelect }: { onSelect: (value: Date) => void }) => (
     <button
       type="button"
-      onClick={() => onSelect(new Date("2026-04-10T00:00:00.000Z"))}
+      onClick={() => {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(0, 0, 0, 0);
+        onSelect(tomorrow);
+      }}
     >
       Pick Date
     </button>
   ),
 }));
 
-jest.mock("@/lib/services/appointmentService", () => ({
+jest.mock("@/lib/services/client/appointmentService", () => ({
   appointmentService: {
     getAvailableSlots: jest.fn(() => ["09:00", "09:30"]),
     schedule: jest.fn(),
   },
 }));
 
-jest.mock("@/lib/services/authService", () => ({
+jest.mock("@/lib/services/client/authService", () => ({
   authService: {
+    getCurrentUser: jest.fn(() => ({
+      did: 7,
+      name: "Dr. Maria",
+      email: "doc@mail.com",
+      role: "doctor",
+    })),
     getCurrentUserName: jest.fn(() => "Dr. Maria"),
   },
 }));
@@ -75,17 +86,19 @@ describe("ScheduleDialog", () => {
     );
   });
 
-  it("shows phone validation when user jumps to reason first", () => {
+  it("does not force phone error just by focusing reason", () => {
     render(<ScheduleDialog open={true} onOpenChange={jest.fn()} />);
 
     fireEvent.focus(
       screen.getByPlaceholderText("e.g. Routine checkup, Follow-up"),
     );
 
-    expect(screen.getByText("Phone number is required.")).toBeInTheDocument();
+    expect(
+      screen.queryByText("Phone number is required."),
+    ).not.toBeInTheDocument();
   });
 
-  it("schedules appointment on valid input", () => {
+  it("schedules appointment on valid input", async () => {
     const onOpenChange = jest.fn();
     render(<ScheduleDialog open={true} onOpenChange={onOpenChange} />);
 
@@ -109,17 +122,20 @@ describe("ScheduleDialog", () => {
     expect(confirm).toBeEnabled();
     fireEvent.click(confirm);
 
-    expect(authService.getCurrentUserName).toHaveBeenCalled();
-    expect(appointmentService.schedule).toHaveBeenCalledWith(
-      expect.objectContaining({
-        doctorName: "Dr. Maria",
-        patientName: "John Doe",
-        time: "09:00",
-      }),
-    );
-    expect(toast.success).toHaveBeenCalledWith(
-      "Appointment scheduled successfully! (prototype)",
-    );
-    expect(onOpenChange).toHaveBeenCalledWith(false);
+    await waitFor(() => {
+      expect(appointmentService.schedule).toHaveBeenCalledWith(
+        expect.objectContaining({
+          doctorId: "7",
+          doctorName: "Dr. Maria",
+          patientName: "John Doe",
+          patientPhone: "+1 555-0101",
+          time: "09:00",
+        }),
+      );
+      expect(toast.success).toHaveBeenCalledWith(
+        "Appointment scheduled successfully.",
+      );
+      expect(onOpenChange).toHaveBeenCalledWith(false);
+    });
   });
 });

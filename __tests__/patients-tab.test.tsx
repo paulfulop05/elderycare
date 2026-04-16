@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import PatientsTab from "@/components/dashboard/PatientsTab";
-import { patientService } from "@/lib/services/patientService";
+import { patientService } from "@/lib/services/client/patientService";
 
 const pushMock = jest.fn();
 
@@ -62,9 +62,10 @@ jest.mock("@/components/ui/table", () => ({
   ),
 }));
 
-jest.mock("@/lib/services/patientService", () => ({
+jest.mock("@/lib/services/client/patientService", () => ({
   patientService: {
     list: jest.fn(),
+    refresh: jest.fn(),
   },
 }));
 
@@ -123,6 +124,8 @@ describe("PatientsTab", () => {
   beforeEach(() => {
     pushMock.mockReset();
     (patientService.list as jest.Mock).mockReset();
+    (patientService.refresh as jest.Mock).mockReset();
+    (patientService.refresh as jest.Mock).mockResolvedValue(undefined);
     (patientService.list as jest.Mock).mockReturnValue(patients);
   });
 

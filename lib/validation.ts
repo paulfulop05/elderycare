@@ -14,6 +14,7 @@ export type DoctorValidationInput = {
   age: string;
   email: string;
   phone: string;
+  password: string;
 };
 
 export type DoctorValidationErrors = {
@@ -21,6 +22,7 @@ export type DoctorValidationErrors = {
   age?: string;
   email?: string;
   phone?: string;
+  password?: string;
 };
 
 export type LoginValidationInput = {
@@ -154,6 +156,7 @@ export const validateDoctorForm = (
     age: number;
     email: string;
     phone: string;
+    password: string;
   };
 } => {
   const errors: DoctorValidationErrors = {};
@@ -162,6 +165,7 @@ export const validateDoctorForm = (
   const ageNumber = Number.parseInt(input.age, 10);
   const email = sanitizeText(input.email).toLowerCase();
   const phone = sanitizeText(input.phone);
+  const password = input.password;
 
   if (!name) {
     errors.name = "Doctor name is required.";
@@ -187,6 +191,12 @@ export const validateDoctorForm = (
     errors.phone = "Enter a valid phone number.";
   }
 
+  if (!password) {
+    errors.password = "Password is required.";
+  } else if (password.length < 6 || password.length > 72) {
+    errors.password = "Password must be between 6 and 72 characters.";
+  }
+
   return {
     isValid: Object.keys(errors).length === 0,
     errors,
@@ -195,6 +205,7 @@ export const validateDoctorForm = (
       age: Number.isFinite(ageNumber) ? ageNumber : 0,
       email,
       phone,
+      password,
     },
   };
 };

@@ -7,7 +7,7 @@ import {
   ReactNode,
   useEffect,
 } from "react";
-import { browserCookieMonitorService } from "@/lib/services/browserCookieMonitorService";
+import { browserCookieMonitorService } from "@/lib/services/client/browserCookieMonitorService";
 
 type Theme = "light" | "dark";
 

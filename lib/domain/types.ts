@@ -9,18 +9,6 @@ export interface Doctor {
   avatar: string;
 }
 
-export interface Patient {
-  id: string;
-  name: string;
-  age: number;
-  email: string;
-  phone: string;
-  avatar: string;
-  lastVisit: string;
-  metrics: HealthMetrics;
-  metricsHistory: HealthMetrics[];
-}
-
 export interface HealthMetrics {
   date: string;
   weight: number;
@@ -36,12 +24,28 @@ export interface HealthMetrics {
   bfp: number;
 }
 
+export interface Patient {
+  id: string;
+  name: string;
+  age: number;
+  email: string;
+  phone: string;
+  avatar: string;
+  lastVisit: string;
+  doctorNote?: string;
+  hasMetricsData?: boolean;
+  metrics: HealthMetrics;
+  metricsHistory: HealthMetrics[];
+}
+
 export interface Appointment {
   id: string;
+  doctorId?: string;
+  patientId?: string;
   doctorName: string;
   patientName: string;
   date: string;
   time: string;
-  status: "upcoming" | "past" | "cancelled";
+  status: "upcoming" | "completed";
   reason: string;
 }

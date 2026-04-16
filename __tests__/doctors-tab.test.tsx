@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import DoctorsTab from "@/components/dashboard/DoctorsTab";
-import { authService } from "@/lib/services/authService";
-import { doctorService } from "@/lib/services/doctorService";
+import { authService } from "@/lib/services/client/authService";
+import { doctorService } from "@/lib/services/client/doctorService";
 import { toast } from "sonner";
 
 const pushMock = jest.fn();
@@ -91,13 +91,13 @@ jest.mock("@/components/ui/label", () => ({
   ),
 }));
 
-jest.mock("@/lib/services/authService", () => ({
+jest.mock("@/lib/services/client/authService", () => ({
   authService: {
     getUserRole: jest.fn(() => getUserRoleMock()),
   },
 }));
 
-jest.mock("@/lib/services/doctorService", () => ({
+jest.mock("@/lib/services/client/doctorService", () => ({
   doctorService: {
     list: jest.fn(),
     add: jest.fn(),

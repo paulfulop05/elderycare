@@ -1,25 +1,98 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   validatePasswordChangeForm,
-  validateUsernameForm,
+  isValidPhoneNumber,
+  sanitizeText,
 } from "@/lib/validation";
 import { User, Lock, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { authService } from "@/lib/services/client/authService";
+import { doctorService } from "@/lib/services/client/doctorService";
 
 const SettingsTab = () => {
-  const [section, setSection] = useState<"main" | "username" | "password">(
+  const currentUser = authService.getCurrentUser();
+  const [section, setSection] = useState<"main" | "profile" | "password">(
     "main",
   );
-  const [username, setUsername] = useState("");
+  const [name, setName] = useState(currentUser?.name ?? "");
+  const [age, setAge] = useState("");
+  const [email, setEmail] = useState(currentUser?.email ?? "");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
-  const [usernameAttempted, setUsernameAttempted] = useState(false);
+  const [profileAttempted, setProfileAttempted] = useState(false);
   const [passwordAttempted, setPasswordAttempted] = useState(false);
 
-  const usernameValidation = validateUsernameForm(username);
+  useEffect(() => {
+    if (!currentUser || currentUser.did <= 0) {
+      return;
+    }
+
+    void doctorService
+      .getById(String(currentUser.did))
+      .then((doctor) => {
+        if (!doctor) {
+          return;
+        }
+
+        setName(doctor.name);
+        setAge(String(doctor.age));
+        setEmail(doctor.email);
+        setPhoneNumber(doctor.phone);
+      })
+      .catch(() => {
+        toast.error("Failed to load profile settings.");
+      });
+  }, [currentUser]);
+
+  const profileValidation = useMemo(() => {
+    const errors: {
+      name?: string;
+      age?: string;
+      email?: string;
+      phoneNumber?: string;
+    } = {};
+
+    const sanitizedName = sanitizeText(name);
+    const sanitizedEmail = sanitizeText(email).toLowerCase();
+    const sanitizedPhoneNumber = sanitizeText(phoneNumber);
+    const parsedAge = Number.parseInt(age, 10);
+
+    if (
+      !sanitizedName ||
+      sanitizedName.length < 2 ||
+      sanitizedName.length > 80
+    ) {
+      errors.name = "Name must be 2-80 characters.";
+    }
+
+    if (!Number.isFinite(parsedAge) || parsedAge < 24 || parsedAge > 90) {
+      errors.age = "Age must be between 24 and 90.";
+    }
+
+    if (!sanitizedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(sanitizedEmail)) {
+      errors.email = "Enter a valid email address.";
+    }
+
+    if (!isValidPhoneNumber(sanitizedPhoneNumber)) {
+      errors.phoneNumber = "Enter a valid phone number.";
+    }
+
+    return {
+      isValid: Object.keys(errors).length === 0,
+      errors,
+      sanitized: {
+        name: sanitizedName,
+        age: Number.isFinite(parsedAge) ? parsedAge : 0,
+        email: sanitizedEmail,
+        phoneNumber: sanitizedPhoneNumber,
+      },
+    };
+  }, [name, age, email, phoneNumber]);
+
   const passwordValidation = validatePasswordChangeForm({
     currentPassword,
     newPassword,
@@ -27,24 +100,50 @@ const SettingsTab = () => {
 
   const goToMain = () => {
     setSection("main");
-    setUsernameAttempted(false);
+    setProfileAttempted(false);
     setPasswordAttempted(false);
   };
 
-  const handleSaveUsername = () => {
-    setUsernameAttempted(true);
+  const handleSaveProfile = async () => {
+    setProfileAttempted(true);
 
-    if (!usernameValidation.isValid) {
-      toast.error("Please enter a valid username.");
+    if (!profileValidation.isValid) {
+      toast.error("Please fix profile fields before saving.");
       return;
     }
 
-    setUsername(usernameValidation.sanitized.username);
-    toast.success("Username updated (prototype)");
+    if (!currentUser || currentUser.did <= 0) {
+      toast.error("You must be logged in to update profile.");
+      return;
+    }
+
+    try {
+      const updated = await doctorService.updateMyProfile({
+        did: String(currentUser.did),
+        ...profileValidation.sanitized,
+      });
+
+      authService.setCurrentUserProfile({
+        name: updated.name,
+        email: updated.email,
+      });
+
+      setName(updated.name);
+      setAge(String(updated.age));
+      setEmail(updated.email);
+      setPhoneNumber(updated.phoneNumber);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to update profile.";
+      toast.error(message);
+      return;
+    }
+
+    toast.success("Profile updated.");
     goToMain();
   };
 
-  const handleSavePassword = () => {
+  const handleSavePassword = async () => {
     setPasswordAttempted(true);
 
     if (!passwordValidation.isValid) {
@@ -52,9 +151,27 @@ const SettingsTab = () => {
       return;
     }
 
+    if (!currentUser || currentUser.did <= 0) {
+      toast.error("You must be logged in to change password.");
+      return;
+    }
+
+    try {
+      await doctorService.updateMyPassword(
+        String(currentUser.did),
+        currentPassword,
+        newPassword,
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to change password.";
+      toast.error(message);
+      return;
+    }
+
     setCurrentPassword("");
     setNewPassword("");
-    toast.success("Password changed (prototype)");
+    toast.success("Password changed.");
     goToMain();
   };
 
@@ -74,9 +191,9 @@ const SettingsTab = () => {
               variant="ghost"
               size="sm"
               className="w-full justify-start text-foreground h-8"
-              onClick={() => setSection("username")}
+              onClick={() => setSection("profile")}
             >
-              <User className="h-3.5 w-3.5 mr-2" /> Change Username
+              <User className="h-3.5 w-3.5 mr-2" /> Edit Profile
             </Button>
             <Button
               variant="ghost"
@@ -100,22 +217,66 @@ const SettingsTab = () => {
         </div>
       )}
 
-      {section === "username" && (
+      {section === "profile" && (
         <div className="bg-card border border-border rounded-xl p-4 space-y-3">
           <h3 className="font-display text-sm font-semibold text-foreground">
-            Change Username
+            Edit Profile
           </h3>
           <div className="space-y-1">
-            <Label className="text-xs text-foreground">New Username</Label>
+            <Label className="text-xs text-foreground">Name</Label>
             <Input
               className="h-8 text-sm bg-muted border-border text-foreground"
-              placeholder="Enter new username"
-              value={username}
-              onChange={(event) => setUsername(event.target.value)}
+              placeholder="Enter full name"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
             />
-            {usernameAttempted && usernameValidation.errors.username && (
+            {profileAttempted && profileValidation.errors.name && (
               <p className="text-xs text-destructive">
-                {usernameValidation.errors.username}
+                {profileValidation.errors.name}
+              </p>
+            )}
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-foreground">Age</Label>
+            <Input
+              type="number"
+              className="h-8 text-sm bg-muted border-border text-foreground"
+              placeholder="Enter age"
+              value={age}
+              onChange={(event) => setAge(event.target.value)}
+            />
+            {profileAttempted && profileValidation.errors.age && (
+              <p className="text-xs text-destructive">
+                {profileValidation.errors.age}
+              </p>
+            )}
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-foreground">Email</Label>
+            <Input
+              type="email"
+              className="h-8 text-sm bg-muted border-border text-foreground"
+              placeholder="Enter email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+            />
+            {profileAttempted && profileValidation.errors.email && (
+              <p className="text-xs text-destructive">
+                {profileValidation.errors.email}
+              </p>
+            )}
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-foreground">Phone Number</Label>
+            <Input
+              className="h-8 text-sm bg-muted border-border text-foreground"
+              placeholder="+1 555-0000"
+              value={phoneNumber}
+              onChange={(event) => setPhoneNumber(event.target.value)}
+            />
+            {profileAttempted && profileValidation.errors.phoneNumber && (
+              <p className="text-xs text-destructive">
+                {profileValidation.errors.phoneNumber}
               </p>
             )}
           </div>
@@ -130,9 +291,9 @@ const SettingsTab = () => {
             </Button>
             <Button
               size="sm"
-              disabled={!usernameValidation.isValid}
+              disabled={!profileValidation.isValid}
               className="bg-accent text-accent-foreground hover:bg-accent/80 hover:shadow-md active:scale-[0.97] transition-all duration-200"
-              onClick={handleSaveUsername}
+              onClick={handleSaveProfile}
             >
               Save
             </Button>
