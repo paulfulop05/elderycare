@@ -51,6 +51,7 @@ const DoctorsTab = () => {
     email: "",
     phone: "",
     password: "",
+    confirmPassword: "",
   });
   const [addAttempted, setAddAttempted] = useState(false);
 
@@ -104,7 +105,14 @@ const DoctorsTab = () => {
       });
 
       await loadDoctors();
-      setNewDoctor({ name: "", age: "", email: "", phone: "", password: "" });
+      setNewDoctor({
+        name: "",
+        age: "",
+        email: "",
+        phone: "",
+        password: "",
+        confirmPassword: "",
+      });
       setAddAttempted(false);
       setAddOpen(false);
       toast.success("Doctor account created successfully.");
@@ -367,6 +375,28 @@ const DoctorsTab = () => {
               {addAttempted && addDoctorValidation.errors.password && (
                 <p className="text-xs text-destructive">
                   {addDoctorValidation.errors.password}
+                </p>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-foreground">
+                Confirm Password
+              </Label>
+              <Input
+                type="password"
+                placeholder="Confirm password"
+                value={newDoctor.confirmPassword}
+                onChange={(e) =>
+                  setNewDoctor({
+                    ...newDoctor,
+                    confirmPassword: e.target.value,
+                  })
+                }
+                className="h-9 text-sm bg-muted border-border text-foreground placeholder:text-muted-foreground"
+              />
+              {addAttempted && addDoctorValidation.errors.confirmPassword && (
+                <p className="text-xs text-destructive">
+                  {addDoctorValidation.errors.confirmPassword}
                 </p>
               )}
             </div>

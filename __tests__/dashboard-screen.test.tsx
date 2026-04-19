@@ -58,6 +58,7 @@ jest.mock("@/components/dashboard/ScheduleDialog", () => ({
 jest.mock("@/lib/services/client/authService", () => ({
   authService: {
     getUserRole: jest.fn(() => roleMock),
+    getCurrentUserName: jest.fn(() => "Dr. Meredith Grey"),
     logout: jest.fn(() => logoutMock()),
   },
 }));
@@ -80,6 +81,7 @@ describe("Dashboard screen", () => {
   it("renders role-based tabs for admin and switches tab content", () => {
     render(<Dashboard />);
 
+    expect(screen.getByText("Dr. Meredith Grey")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /Doctors/i }),
     ).toBeInTheDocument();

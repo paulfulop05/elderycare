@@ -15,6 +15,7 @@ export type DoctorValidationInput = {
   email: string;
   phone: string;
   password: string;
+  confirmPassword: string;
 };
 
 export type DoctorValidationErrors = {
@@ -23,6 +24,7 @@ export type DoctorValidationErrors = {
   email?: string;
   phone?: string;
   password?: string;
+  confirmPassword?: string;
 };
 
 export type LoginValidationInput = {
@@ -166,6 +168,7 @@ export const validateDoctorForm = (
   const email = sanitizeText(input.email).toLowerCase();
   const phone = sanitizeText(input.phone);
   const password = input.password;
+  const confirmPassword = input.confirmPassword;
 
   if (!name) {
     errors.name = "Doctor name is required.";
@@ -195,6 +198,12 @@ export const validateDoctorForm = (
     errors.password = "Password is required.";
   } else if (password.length < 6 || password.length > 72) {
     errors.password = "Password must be between 6 and 72 characters.";
+  }
+
+  if (!confirmPassword) {
+    errors.confirmPassword = "Confirm password is required.";
+  } else if (password !== confirmPassword) {
+    errors.confirmPassword = "Passwords do not match.";
   }
 
   return {

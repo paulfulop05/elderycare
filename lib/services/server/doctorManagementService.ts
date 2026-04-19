@@ -2,6 +2,8 @@ import type { UserRole } from "@/lib/domain";
 import * as doctorRepo from "@/lib/repositories/doctorsRepository";
 import { isValidPhoneNumber, sanitizeText } from "@/lib/validation";
 
+const bcrypt = require("bcrypt");
+
 type CreateDoctorInput = {
   name?: unknown;
   age?: unknown;
@@ -146,6 +148,8 @@ export async function getDoctorById(rawId: string) {
 
 export async function createDoctor(rawInput: CreateDoctorInput) {
   const input = parseCreateDoctorInput(rawInput);
+  input.password = await bcrypt.hash(input.password, 10);
+
   const existing = await doctorRepo.findDoctorByEmail(input.email);
 
   if (existing) {
@@ -155,7 +159,6 @@ export async function createDoctor(rawInput: CreateDoctorInput) {
     );
   }
 
-  // TODO: replace with hashed password before production use.
   return doctorRepo.registerDoctor(
     input.age,
     input.name,
@@ -181,7 +184,12 @@ export async function authenticateDoctorLogin(rawInput: LoginDoctorInput) {
   const input = parseLoginDoctorInput(rawInput);
   const doctor = await doctorRepo.findDoctorByEmail(input.email);
 
-  if (!doctor || doctor.password !== input.password) {
+  if (!doctor) {
+    throw new DoctorServiceError("Invalid email or password.", 401);
+  }
+
+  const isPasswordValid = await bcrypt.compare(input.password, doctor.password);
+  if (!isPasswordValid) {
     throw new DoctorServiceError("Invalid email or password.", 401);
   }
 

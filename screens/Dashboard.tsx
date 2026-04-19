@@ -28,6 +28,8 @@ const Dashboard = () => {
   const router = useRouter();
   const { theme, toggleTheme } = useTheme();
   const role = authService.getUserRole();
+  const currentUserName = authService.getCurrentUserName().trim();
+  const displayName = currentUserName.length > 0 ? currentUserName : "Doctor";
 
   const baseTabs = [
     { id: "appointments", label: "Appointments", icon: CalendarDays },
@@ -53,7 +55,15 @@ const Dashboard = () => {
               <span className="font-semibold text-accent">care</span>
             </span>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
+            <div className="hidden md:flex items-center gap-2 rounded-full border border-border/70 bg-background/70 px-2.5 py-1">
+              <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary/15 text-[10px] font-semibold uppercase text-primary">
+                {displayName.charAt(0)}
+              </span>
+              <span className="max-w-[10rem] truncate text-xs font-medium text-foreground/85">
+                {displayName}
+              </span>
+            </div>
             <HealthProgressQuickButton />
             <Button
               variant="ghost"
