@@ -295,9 +295,14 @@ export async function updateDoctorPassword(
     throw new DoctorServiceError("Doctor not found.", 404);
   }
 
-  if (existing.password !== currentPassword) {
+  const isPasswordValid = await bcrypt.compare(
+    currentPassword,
+    existing.password,
+  );
+  if (!isPasswordValid) {
     throw new DoctorServiceError("Current password is incorrect.", 401);
   }
 
-  await doctorRepo.updateDoctorPassword(did, newPassword);
+  const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+  await doctorRepo.updateDoctorPassword(did, hashedNewPassword);
 }

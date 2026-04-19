@@ -13,15 +13,68 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const router = useRouter();
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
+  const [authorized, setAuthorized] = useState<boolean | null>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const authorized = mounted && authService.isLoggedIn();
+  useEffect(() => {
+    if (!mounted) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const validateAuth = async () => {
+      if (!authService.isLoggedIn()) {
+        if (!cancelled) {
+          setAuthorized(false);
+        }
+        return;
+      }
+
+      const currentUser = authService.getCurrentUser();
+      if (!currentUser || currentUser.did <= 0) {
+        if (!cancelled) {
+          setAuthorized(true);
+        }
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/doctors/${currentUser.did}`, {
+          cache: "no-store",
+        });
+
+        if (!cancelled) {
+          if (response.ok) {
+            setAuthorized(true);
+            return;
+          }
+
+          if (response.status === 404) {
+            authService.logout();
+          }
+
+          setAuthorized(false);
+        }
+      } catch {
+        if (!cancelled) {
+          setAuthorized(false);
+        }
+      }
+    };
+
+    void validateAuth();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [mounted]);
 
   useEffect(() => {
-    if (mounted && !authorized) {
+    if (mounted && authorized === false) {
       const redirectTarget = pathname
         ? `?from=${encodeURIComponent(pathname)}`
         : "";

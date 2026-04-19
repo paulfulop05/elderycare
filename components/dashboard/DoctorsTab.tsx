@@ -96,13 +96,38 @@ const DoctorsTab = () => {
 
     try {
       setIsSubmitting(true);
+      const password = addDoctorValidation.sanitized.password;
       await doctorService.add({
         name: addDoctorValidation.sanitized.name,
         age: addDoctorValidation.sanitized.age,
         email: addDoctorValidation.sanitized.email,
         phone: addDoctorValidation.sanitized.phone,
-        password: addDoctorValidation.sanitized.password,
+        password: password,
       });
+
+      // Send welcome email to doctor
+      try {
+        const emailResponse = await fetch("/api/doctors/send-welcome-email", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: addDoctorValidation.sanitized.email,
+            name: addDoctorValidation.sanitized.name,
+            password: password,
+          }),
+        });
+
+        if (!emailResponse.ok) {
+          throw new Error("Welcome email request failed.");
+        }
+      } catch (emailError) {
+        console.error("Failed to send welcome email:", emailError);
+        toast.warning(
+          "Doctor created but welcome email failed to send. You may need to send it manually.",
+        );
+      }
 
       await loadDoctors();
       setNewDoctor({

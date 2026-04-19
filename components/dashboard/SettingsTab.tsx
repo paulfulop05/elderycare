@@ -23,6 +23,7 @@ const SettingsTab = () => {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [profileAttempted, setProfileAttempted] = useState(false);
   const [passwordAttempted, setPasswordAttempted] = useState(false);
 
@@ -96,6 +97,7 @@ const SettingsTab = () => {
   const passwordValidation = validatePasswordChangeForm({
     currentPassword,
     newPassword,
+    confirmPassword: confirmNewPassword,
   });
 
   const goToMain = () => {
@@ -171,6 +173,7 @@ const SettingsTab = () => {
 
     setCurrentPassword("");
     setNewPassword("");
+    setConfirmNewPassword("");
     toast.success("Password changed.");
     goToMain();
   };
@@ -333,6 +336,23 @@ const SettingsTab = () => {
             {passwordAttempted && passwordValidation.errors.newPassword && (
               <p className="text-xs text-destructive">
                 {passwordValidation.errors.newPassword}
+              </p>
+            )}
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-foreground">
+              Confirm New Password
+            </Label>
+            <Input
+              type="password"
+              className="h-8 text-sm bg-muted border-border text-foreground"
+              placeholder="••••••••"
+              value={confirmNewPassword}
+              onChange={(event) => setConfirmNewPassword(event.target.value)}
+            />
+            {passwordAttempted && passwordValidation.errors.confirmPassword && (
+              <p className="text-xs text-destructive">
+                {passwordValidation.errors.confirmPassword}
               </p>
             )}
           </div>

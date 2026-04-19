@@ -44,11 +44,13 @@ export type UsernameValidationErrors = {
 export type PasswordChangeValidationInput = {
   currentPassword: string;
   newPassword: string;
+  confirmPassword: string;
 };
 
 export type PasswordChangeValidationErrors = {
   currentPassword?: string;
   newPassword?: string;
+  confirmPassword?: string;
 };
 
 export type ScheduleValidationErrors = {
@@ -300,6 +302,12 @@ export const validatePasswordChangeForm = (
   } else if (input.newPassword === input.currentPassword) {
     errors.newPassword =
       "New password must be different from current password.";
+  }
+
+  if (!input.confirmPassword) {
+    errors.confirmPassword = "Confirm password is required.";
+  } else if (input.newPassword !== input.confirmPassword) {
+    errors.confirmPassword = "Passwords do not match.";
   }
 
   return {

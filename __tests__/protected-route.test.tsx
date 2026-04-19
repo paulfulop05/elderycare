@@ -12,16 +12,30 @@ jest.mock("next/navigation", () => ({
 jest.mock("@/lib/services/client/authService", () => ({
   authService: {
     isLoggedIn: jest.fn(),
+    getCurrentUser: jest.fn(),
+    logout: jest.fn(),
   },
 }));
 
 describe("ProtectedRoute", () => {
   beforeEach(() => {
     replaceMock.mockReset();
+    (global.fetch as jest.Mock | undefined)?.mockReset?.();
   });
 
-  it("renders children when authorized", () => {
+  it("renders children when authorized", async () => {
     (authService.isLoggedIn as jest.Mock).mockReturnValue(true);
+    (authService.getCurrentUser as jest.Mock).mockReturnValue({
+      did: 1,
+      name: "Doctor",
+      email: "doctor@elderycare.com",
+      role: "doctor",
+    });
+
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+    }) as unknown as typeof fetch;
 
     render(
       <ProtectedRoute>
@@ -29,7 +43,9 @@ describe("ProtectedRoute", () => {
       </ProtectedRoute>,
     );
 
-    expect(screen.getByText("Secret Content")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("Secret Content")).toBeInTheDocument();
+    });
     expect(replaceMock).not.toHaveBeenCalled();
   });
 
@@ -45,6 +61,32 @@ describe("ProtectedRoute", () => {
     expect(container).toBeEmptyDOMElement();
 
     await waitFor(() => {
+      expect(replaceMock).toHaveBeenCalledWith("/login?from=%2Fdashboard");
+    });
+  });
+
+  it("logs out and redirects when account no longer exists", async () => {
+    (authService.isLoggedIn as jest.Mock).mockReturnValue(true);
+    (authService.getCurrentUser as jest.Mock).mockReturnValue({
+      did: 42,
+      name: "Deleted User",
+      email: "deleted@elderycare.com",
+      role: "doctor",
+    });
+
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+    }) as unknown as typeof fetch;
+
+    render(
+      <ProtectedRoute>
+        <div>Secret Content</div>
+      </ProtectedRoute>,
+    );
+
+    await waitFor(() => {
+      expect(authService.logout).toHaveBeenCalled();
       expect(replaceMock).toHaveBeenCalledWith("/login?from=%2Fdashboard");
     });
   });

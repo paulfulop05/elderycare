@@ -112,6 +112,9 @@ describe("SettingsTab", () => {
     fireEvent.change(screen.getAllByPlaceholderText("••••••••")[1], {
       target: { value: "newpass123" },
     });
+    fireEvent.change(screen.getAllByPlaceholderText("••••••••")[2], {
+      target: { value: "newpass123" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
