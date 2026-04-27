@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import PatientsTab from "@/components/dashboard/PatientsTab";
 import { patientService } from "@/lib/services/client/patientService";
 
@@ -129,25 +129,41 @@ describe("PatientsTab", () => {
     (patientService.list as jest.Mock).mockReturnValue(patients);
   });
 
-  it("navigates to patient details from table row", () => {
+  it("navigates to patient details from table row", async () => {
     render(<PatientsTab />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Patient One")).toBeInTheDocument();
+    });
 
     fireEvent.click(screen.getByText("Patient One"));
     expect(pushMock).toHaveBeenCalledWith("/dashboard/patient/1");
   });
 
-  it("filters by search and resets page", () => {
+  it("filters by search and resets page", async () => {
     render(<PatientsTab />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Patient One")).toBeInTheDocument();
+    });
 
     fireEvent.change(screen.getByPlaceholderText("Search..."), {
       target: { value: "Six" },
     });
-    expect(screen.getByText("Patient Six")).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(screen.getByText("Patient Six")).toBeInTheDocument();
+    });
+
     expect(screen.queryByText("Patient One")).not.toBeInTheDocument();
   });
 
-  it("switches to visual mode and supports eye-button navigation", () => {
+  it("switches to visual mode and supports eye-button navigation", async () => {
     render(<PatientsTab />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Patient One")).toBeInTheDocument();
+    });
 
     const buttons = screen.getAllByRole("button");
     fireEvent.click(buttons[1]);

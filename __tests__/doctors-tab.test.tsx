@@ -1,8 +1,11 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import DoctorsTab from "@/components/dashboard/DoctorsTab";
 import { authService } from "@/lib/services/client/authService";
 import { doctorService } from "@/lib/services/client/doctorService";
 import { toast } from "sonner";
+
+// Mock fetch
+global.fetch = jest.fn();
 
 const pushMock = jest.fn();
 const getUserRoleMock = jest.fn();
@@ -38,9 +41,9 @@ jest.mock("@/components/ui/button", () => ({
     onClick,
   }: {
     children: React.ReactNode;
-    onClick?: (e?: unknown) => void;
+    onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
   }) => (
-    <button type="button" onClick={() => onClick?.()}>
+    <button type="button" onClick={(e) => onClick?.(e)}>
       {children}
     </button>
   ),
@@ -129,6 +132,7 @@ const doctors = [
 
 describe("DoctorsTab", () => {
   beforeEach(() => {
+    jest.clearAllMocks();
     pushMock.mockReset();
     getUserRoleMock.mockReset();
     (doctorService.list as jest.Mock).mockReset();
@@ -136,15 +140,36 @@ describe("DoctorsTab", () => {
     (doctorService.remove as jest.Mock).mockReset();
     (toast.success as jest.Mock).mockReset();
     (toast.error as jest.Mock).mockReset();
+    (global.fetch as jest.Mock).mockReset();
 
     getUserRoleMock.mockReturnValue("admin");
-    (doctorService.list as jest.Mock).mockReturnValue(doctors);
-    (doctorService.add as jest.Mock).mockImplementation(() => undefined);
-    (doctorService.remove as jest.Mock).mockImplementation(() => undefined);
+    (doctorService.list as jest.Mock).mockResolvedValue(doctors);
+    (doctorService.add as jest.Mock).mockImplementation(async () => {
+      const newDoctor = {
+        id: "7",
+        name: "Dr. Seven",
+        age: 40,
+        email: "seven@mail.com",
+        avatar: "DS",
+        phone: "+1 555-4444",
+      };
+      return newDoctor;
+    });
+    (doctorService.remove as jest.Mock).mockResolvedValue(undefined);
+
+    // Mock fetch for welcome email
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: async () => ({}),
+    });
   });
 
-  it("navigates to doctor details and supports search + pagination", () => {
+  it("navigates to doctor details and supports search + pagination", async () => {
     render(<DoctorsTab />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Dr. One")).toBeInTheDocument();
+    });
 
     fireEvent.click(screen.getByText("Dr. One"));
     expect(pushMock).toHaveBeenCalledWith("/dashboard/doctor/1");
@@ -152,27 +177,39 @@ describe("DoctorsTab", () => {
     fireEvent.change(screen.getByPlaceholderText("Search..."), {
       target: { value: "Six" },
     });
-    expect(screen.getByText("Dr. Six")).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(screen.getByText("Dr. Six")).toBeInTheDocument();
+    });
+
     expect(screen.queryByText("Dr. One")).not.toBeInTheDocument();
   });
 
-  it("adds doctor with valid input and shows success", () => {
+  it("adds doctor with valid input and shows success", async () => {
+    const updatedDoctorsList = [
+      ...doctors,
+      {
+        id: "7",
+        name: "Dr. Seven",
+        age: 40,
+        email: "seven@mail.com",
+        avatar: "DS",
+        phone: "+1 555-4444",
+      },
+    ];
+
     (doctorService.list as jest.Mock)
-      .mockReturnValueOnce(doctors)
-      .mockReturnValueOnce([
-        ...doctors,
-        {
-          id: "7",
-          name: "Dr. Seven",
-          age: 40,
-          email: "seven@mail.com",
-          avatar: "DS",
-        },
-      ]);
+      .mockResolvedValueOnce(doctors)
+      .mockResolvedValueOnce(updatedDoctorsList);
 
     render(<DoctorsTab />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Add Doctor" }));
+    await waitFor(() => {
+      expect(screen.getByText("Dr. One")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Add Doctor/i }));
+
     fireEvent.change(screen.getByPlaceholderText("Dr. Full Name"), {
       target: { value: "Dr. Seven" },
     });
@@ -185,39 +222,61 @@ describe("DoctorsTab", () => {
     fireEvent.change(screen.getByPlaceholderText("+1 555-0100"), {
       target: { value: "+1 555-4444" },
     });
+    fireEvent.change(screen.getByPlaceholderText("min 6 characters"), {
+      target: { value: "password123" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Confirm password"), {
+      target: { value: "password123" },
+    });
 
-    const addButtons = screen.getAllByRole("button", { name: "Add Doctor" });
+    const addButtons = screen.getAllByRole("button", { name: /Add Doctor/i });
     fireEvent.click(addButtons[1]);
 
-    expect(doctorService.add).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(doctorService.add).toHaveBeenCalled();
+    });
+
     expect(toast.success).toHaveBeenCalledWith(
-      "Doctor added successfully (prototype)",
+      "Doctor account created successfully.",
     );
   });
 
-  it("hides admin actions for non-admin role", () => {
+  it("hides admin actions for non-admin role", async () => {
     getUserRoleMock.mockReturnValue("doctor");
     render(<DoctorsTab />);
 
-    expect(
-      screen.queryByRole("button", { name: "Add Doctor" }),
-    ).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("button", { name: /Add Doctor/i }),
+      ).not.toBeInTheDocument();
+    });
   });
 
-  it("shows error when trying to add with invalid data", () => {
+  it("shows error when trying to add with invalid data", async () => {
     render(<DoctorsTab />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Add Doctor" }));
-    const addButtons = screen.getAllByRole("button", { name: "Add Doctor" });
+    await waitFor(() => {
+      expect(screen.getByText("Dr. One")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Add Doctor/i }));
+
+    const addButtons = screen.getAllByRole("button", { name: /Add Doctor/i });
     fireEvent.click(addButtons[1]);
 
-    expect(toast.error).toHaveBeenCalledWith(
-      "Please correct the form errors before adding a doctor.",
-    );
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        "Please correct the form errors before adding a doctor.",
+      );
+    });
   });
 
-  it("switches to visual mode", () => {
+  it("switches to visual mode", async () => {
     render(<DoctorsTab />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Dr. One")).toBeInTheDocument();
+    });
 
     const buttons = screen.getAllByRole("button");
     fireEvent.click(buttons[1]);

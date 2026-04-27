@@ -76,6 +76,8 @@ describe("validation", () => {
       age: "2",
       email: "bad",
       phone: "abc",
+      password: "password123",
+      confirmPassword: "password123",
     });
     expect(invalid.isValid).toBe(false);
     expect(invalid.errors.name).toBeDefined();
@@ -86,6 +88,8 @@ describe("validation", () => {
       age: "35",
       email: " ANA@MAIL.COM ",
       phone: "+1 555-000-1234",
+      password: "password123",
+      confirmPassword: "password123",
     });
     expect(valid.isValid).toBe(true);
     expect(valid.sanitized.name).toBe("Ana Maria");
@@ -99,12 +103,14 @@ describe("validation", () => {
     const pwdInvalid = validatePasswordChangeForm({
       currentPassword: "secret123",
       newPassword: "secret123",
+      confirmPassword: "secret123",
     });
     expect(pwdInvalid.isValid).toBe(false);
 
     const pwdValid = validatePasswordChangeForm({
       currentPassword: "oldpass123",
       newPassword: "newpass123",
+      confirmPassword: "newpass123",
     });
     expect(pwdValid.isValid).toBe(true);
   });
