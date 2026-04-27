@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { authService } from "@/lib/services/authService";
 import { doctorService } from "@/lib/services/doctorService";
@@ -49,6 +49,14 @@ const DoctorsTab = () => {
     phone: "",
   });
   const [addAttempted, setAddAttempted] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = doctorService.subscribe(() => {
+      setDoctorList(doctorService.list());
+    });
+
+    return unsubscribe;
+  }, []);
 
   const filtered = doctorList.filter((d) =>
     d.name.toLowerCase().includes(search.toLowerCase()),

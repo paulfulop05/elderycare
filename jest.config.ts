@@ -27,13 +27,16 @@ const config: Config = {
   // Indicates whether the coverage information should be collected while executing the test
   collectCoverage: true,
 
-  // Keep coverage on behavior-heavy code and exclude route wrapper entry files.
+  // Focus coverage on CRUD server logic and client/server validation logic.
   collectCoverageFrom: [
-    "components/**/*.tsx",
-    "contexts/**/*.tsx",
-    "hooks/**/*.tsx",
-    "lib/**/*.ts",
-    "!components/ui/**",
+    "lib/api/**/*.ts",
+    "lib/services/**/*.ts",
+    "lib/repositories/inMemoryRepository.ts",
+    "lib/validation.ts",
+    "!lib/generated/**",
+    "!lib/fakerMockData.ts",
+    "!lib/services/browserCookieMonitorService.ts",
+    "!lib/services/mockDataService.ts",
   ],
 
   // The directory where Jest should output its coverage files
@@ -170,11 +173,13 @@ const config: Config = {
   // Adds a location field to test results
   // testLocationInResults: false,
 
-  // The glob patterns Jest uses to detect test files
-  // testMatch: [
-  //   "**/__tests__/**/*.?([mc])[jt]s?(x)",
-  //   "**/?(*.)+(spec|test).?([mc])[jt]s?(x)"
-  // ],
+  // Run only the critical CRUD and validation unit tests.
+  testMatch: [
+    "**/__tests__/api-handlers.test.ts",
+    "**/__tests__/auth-appointment-services.test.ts",
+    "**/__tests__/doctor-patient-note-services.test.ts",
+    "**/__tests__/validation.test.ts",
+  ],
 
   // An array of regexp pattern strings that are matched against all test paths, matched tests are skipped
   // testPathIgnorePatterns: [

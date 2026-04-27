@@ -24,12 +24,17 @@ export interface DoctorRepository {
   add: (doctor: Doctor) => Doctor;
   remove: (id: string) => void;
   nextId: () => string;
+  replaceAll: (doctors: Doctor[]) => void;
 }
 
 export interface PatientRepository {
   getAll: () => Patient[];
   getById: (id: string) => Patient | undefined;
+  add: (patient: Patient) => Patient;
   updateMetrics: (id: string, metrics: HealthMetrics) => Patient | undefined;
+  nextId: () => string;
+  replaceAll: (patients: Patient[]) => void;
+  removeMetricByDate: (id: string, date: string) => Patient | undefined;
 }
 
 export interface AppointmentRepository {
@@ -42,11 +47,13 @@ export interface AppointmentRepository {
   add: (appointment: Appointment) => Appointment;
   nextId: () => string;
   getAvailableSlots: () => string[];
+  replaceAll: (appointments: Appointment[]) => void;
 }
 
 export interface NoteRepository {
   getAllByPatientId: () => Record<string, string>;
   setByPatientId: (patientId: string, value: string) => void;
+  replaceAll: (notesByPatientId: Record<string, string>) => void;
 }
 
 export interface MockDataRepository {

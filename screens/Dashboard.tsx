@@ -22,6 +22,7 @@ import SettingsTab from "@/components/dashboard/SettingsTab";
 import AppointmentsSection from "@/components/dashboard/AppointmentsSection";
 import ScheduleDialog from "@/components/dashboard/ScheduleDialog";
 import HealthProgressQuickButton from "@/components/HealthProgressQuickButton";
+import OfflineSyncBadge from "@/components/OfflineSyncBadge";
 import { authService } from "@/lib/services/authService";
 
 const Dashboard = () => {
@@ -54,6 +55,7 @@ const Dashboard = () => {
             </span>
           </div>
           <div className="flex items-center gap-1">
+            <OfflineSyncBadge />
             <HealthProgressQuickButton />
             <Button
               variant="ghost"

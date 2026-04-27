@@ -1,5 +1,32 @@
 import type { Doctor } from "@/lib/domain";
 import { doctorRepository } from "@/lib/data";
+import { enqueueOfflineMutation } from "@/lib/client/offlineSync";
+
+const createDoctorMutation = `
+  mutation CreateDoctor($input: DoctorInput!) {
+    createDoctor(input: $input) {
+      id
+    }
+  }
+`;
+
+const deleteDoctorMutation = `
+  mutation DeleteDoctor($id: ID!) {
+    deleteDoctor(id: $id)
+  }
+`;
+
+type DoctorsListener = () => void;
+
+const doctorListeners = new Set<DoctorsListener>();
+
+const notifyDoctorsChanged = (): void => {
+  doctorListeners.forEach((listener) => {
+    listener();
+  });
+};
+
+const isBrowser = (): boolean => typeof window !== "undefined";
 
 type NewDoctorInput = {
   name: string;
@@ -29,9 +56,31 @@ export const doctorService = {
       avatar: buildAvatar(input.name),
     };
 
-    return doctorRepository.add(doctor);
+    const created = doctorRepository.add(doctor);
+    notifyDoctorsChanged();
+
+    if (isBrowser()) {
+      void enqueueOfflineMutation(createDoctorMutation, { input });
+    }
+
+    return created;
   },
   remove: (id: string): void => {
     doctorRepository.remove(id);
+    notifyDoctorsChanged();
+
+    if (isBrowser()) {
+      void enqueueOfflineMutation(deleteDoctorMutation, { id });
+    }
+  },
+  replaceAll: (doctors: Doctor[]): void => {
+    doctorRepository.replaceAll(doctors);
+    notifyDoctorsChanged();
+  },
+  subscribe: (listener: DoctorsListener): (() => void) => {
+    doctorListeners.add(listener);
+    return () => {
+      doctorListeners.delete(listener);
+    };
   },
 };

@@ -70,6 +70,44 @@ describe("validation", () => {
     expect(valid.sanitized.patientName).toBe("Jane Roe");
   });
 
+  it("rejects schedule dates in the past and unavailable slots", () => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    const pastDate = validateScheduleForm({
+      patientName: "John Doe",
+      patientPhone: "+1 555-123-4567",
+      reason: "Follow up",
+      selectedDate: yesterday,
+      selectedTime: "09:00",
+      availableSlots: ["09:00"],
+    });
+
+    expect(pastDate.isValid).toBe(false);
+    expect(pastDate.errors.selectedDate).toBeDefined();
+
+    const futureWeekday = new Date();
+    futureWeekday.setDate(futureWeekday.getDate() + 2);
+    if (futureWeekday.getDay() === 0) {
+      futureWeekday.setDate(futureWeekday.getDate() + 1);
+    }
+    if (futureWeekday.getDay() === 6) {
+      futureWeekday.setDate(futureWeekday.getDate() + 2);
+    }
+
+    const missingSlot = validateScheduleForm({
+      patientName: "John Doe",
+      patientPhone: "+1 555-123-4567",
+      reason: "Follow up",
+      selectedDate: futureWeekday,
+      selectedTime: "08:00",
+      availableSlots: ["09:00"],
+    });
+
+    expect(missingSlot.isValid).toBe(false);
+    expect(missingSlot.errors.selectedTime).toBeDefined();
+  });
+
   it("validates doctor form and sanitizes output", () => {
     const invalid = validateDoctorForm({
       name: "",
@@ -90,6 +128,18 @@ describe("validation", () => {
     expect(valid.isValid).toBe(true);
     expect(valid.sanitized.name).toBe("Ana Maria");
     expect(valid.sanitized.email).toBe("ana@mail.com");
+  });
+
+  it("rejects non-numeric doctor age", () => {
+    const invalid = validateDoctorForm({
+      name: "Doctor Name",
+      age: "not-a-number",
+      email: "doctor@mail.com",
+      phone: "+1 555 123 4567",
+    });
+
+    expect(invalid.isValid).toBe(false);
+    expect(invalid.errors.age).toBeDefined();
   });
 
   it("validates username and password change forms", () => {

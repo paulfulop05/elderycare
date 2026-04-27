@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { doctorService } from "@/lib/services/doctorService";
 import { appointmentService } from "@/lib/services/appointmentService";
-import { mockDataService } from "@/lib/services/mockDataService";
 import { Button } from "@/components/ui/button";
 import {
   ArrowLeft,
@@ -35,6 +34,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import HealthProgressQuickButton from "@/components/HealthProgressQuickButton";
 import { toast } from "sonner";
+import { executeGraphQL } from "@/lib/client/graphql";
 
 const buildMonthlyVisits = (
   appointments: ReturnType<typeof appointmentService.listByDoctorName>,
@@ -87,49 +87,52 @@ const DoctorDetail = () => {
   };
 
   useEffect(() => {
-    if (isRandomizing) {
-      refreshIntervalRef.current = setInterval(() => {
-        refreshData();
-      }, 500);
-    } else {
+    const unsubscribeAppointments = appointmentService.subscribe(refreshData);
+    const unsubscribeDoctors = doctorService.subscribe(refreshData);
+
+    return () => {
+      unsubscribeAppointments();
+      unsubscribeDoctors();
+
       if (refreshIntervalRef.current) {
         clearInterval(refreshIntervalRef.current);
         refreshIntervalRef.current = null;
-      }
-    }
-
-    return () => {
-      if (refreshIntervalRef.current) {
-        clearInterval(refreshIntervalRef.current);
-        refreshIntervalRef.current = null;
-      }
-    };
-  }, [isRandomizing]);
-
-  useEffect(() => {
-    return () => {
-      if (isRandomizing) {
-        mockDataService.stopContinuousRegeneration();
       }
     };
   }, []);
 
-  const handleRandomizeData = () => {
+  useEffect(() => {
+    return () => {
+      if (isRandomizing) {
+        void executeGraphQL(
+          `mutation StopMockGeneration { stopMockGeneration }`,
+        );
+      }
+    };
+  }, [isRandomizing]);
+
+  const handleRandomizeData = async () => {
     if (isRandomizing) {
-      mockDataService.stopContinuousRegeneration();
+      await executeGraphQL(
+        `mutation StopMockGeneration { stopMockGeneration }`,
+      );
       setIsRandomizing(false);
       toast.success("Randomization stopped.");
     } else {
-      mockDataService.startContinuousRegeneration();
+      await executeGraphQL(
+        `mutation StartMockGeneration($batchSize: Int, $intervalMs: Int) {
+          startMockGeneration(batchSize: $batchSize, intervalMs: $intervalMs)
+        }`,
+        { batchSize: 3, intervalMs: 2000 },
+      );
       setIsRandomizing(true);
       toast.success("Continuously randomizing mock data. Click to cancel.");
     }
   };
 
-  const handleClearData = () => {
-    mockDataService.clear();
-    refreshData();
-    toast.success("Mock data cleared.");
+  const handleClearData = async () => {
+    await executeGraphQL(`mutation ClearMockData { clearMockData }`);
+    toast.success("Server-side mock data cleared.");
   };
 
   const doctor = doctorService.getById(id);

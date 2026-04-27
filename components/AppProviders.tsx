@@ -6,6 +6,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import BrowserActivityMonitor from "@/components/BrowserActivityMonitor";
+import OfflineSyncRuntime from "@/components/OfflineSyncRuntime";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 
 type AppProvidersProps = {
@@ -20,6 +21,7 @@ export default function AppProviders({ children }: AppProvidersProps) {
       <ThemeProvider>
         <TooltipProvider>
           <BrowserActivityMonitor />
+          <OfflineSyncRuntime />
           {children}
           <Toaster />
           <Sonner />

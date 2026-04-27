@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { patientService } from "@/lib/services/patientService";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,32 +13,124 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Search,
-  ChevronLeft,
-  ChevronRight,
-  Eye,
-  LayoutGrid,
-  List,
-} from "lucide-react";
+import { Search, LoaderCircle, Eye, LayoutGrid, List } from "lucide-react";
+import { executeGraphQL } from "@/lib/client/graphql";
+import type { Patient } from "@/lib/domain";
 
-const ROWS_PER_PAGE = 5;
+type PatientsApiResponse = {
+  patients: {
+    items: Patient[];
+    pagination: {
+      page: number;
+      pageSize: number;
+      total: number;
+      totalPages: number;
+    };
+  };
+};
+
+const PAGE_SIZE = 8;
 
 const PatientsTab = () => {
   const router = useRouter();
-  const patients = patientService.list();
   const [search, setSearch] = useState("");
-  const [page, setPage] = useState(0);
   const [viewMode, setViewMode] = useState<"table" | "visual">("table");
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
-  const filtered = patients.filter((p) =>
-    p.name.toLowerCase().includes(search.toLowerCase()),
+  const { data, fetchNextPage, hasNextPage, isFetching, isFetchingNextPage } =
+    useInfiniteQuery({
+      queryKey: ["patients", search],
+      initialPageParam: 1,
+      queryFn: ({ pageParam }) =>
+        executeGraphQL<PatientsApiResponse>(
+          `query PatientsPage($page: Int!, $pageSize: Int!, $search: String) {
+            patients(page: $page, pageSize: $pageSize, search: $search) {
+              items {
+                id
+                name
+                age
+                email
+                phone
+                avatar
+                lastVisit
+                metrics {
+                  date
+                  weight
+                  height
+                  bmi
+                  bodyFat
+                  muscleMass
+                  bodyWater
+                  metabolicAge
+                  leanBodyMass
+                  inorganicSalts
+                  smm
+                  bfp
+                }
+                metricsHistory {
+                  date
+                  weight
+                  height
+                  bmi
+                  bodyFat
+                  muscleMass
+                  bodyWater
+                  metabolicAge
+                  leanBodyMass
+                  inorganicSalts
+                  smm
+                  bfp
+                }
+              }
+              pagination { page pageSize total totalPages }
+            }
+          }`,
+          {
+            page: pageParam,
+            pageSize: PAGE_SIZE,
+            search: search || null,
+          },
+        ),
+      getNextPageParam: (lastPage) => {
+        const pagination = lastPage.patients.pagination;
+        return pagination.page < pagination.totalPages
+          ? pagination.page + 1
+          : undefined;
+      },
+      staleTime: 15000,
+    });
+
+  const items = useMemo(
+    () => data?.pages.flatMap((page) => page.patients.items) ?? [],
+    [data],
   );
-  const totalPages = Math.ceil(filtered.length / ROWS_PER_PAGE);
-  const paginated = filtered.slice(
-    page * ROWS_PER_PAGE,
-    (page + 1) * ROWS_PER_PAGE,
-  );
+
+  const total = data?.pages[0]?.patients.pagination.total ?? 0;
+
+  useEffect(() => {
+    if (!sentinelRef.current) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry?.isIntersecting && hasNextPage && !isFetchingNextPage) {
+          void fetchNextPage();
+        }
+      },
+      {
+        root: null,
+        rootMargin: "200px",
+        threshold: 0,
+      },
+    );
+
+    observer.observe(sentinelRef.current);
+    return () => {
+      observer.disconnect();
+    };
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
   return (
     <div>
@@ -54,7 +146,6 @@ const PatientsTab = () => {
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
-                setPage(0);
               }}
               className="pl-8 h-8 text-sm bg-card border-border text-foreground placeholder:text-muted-foreground"
             />
@@ -106,7 +197,7 @@ const PatientsTab = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginated.map((p) => (
+              {items.map((p) => (
                 <TableRow
                   key={p.id}
                   className="hover:bg-muted/20 cursor-pointer"
@@ -150,7 +241,7 @@ const PatientsTab = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {paginated.map((p) => (
+          {items.map((p) => (
             <div
               key={p.id}
               className="rounded-xl border border-border bg-card p-4 cursor-pointer hover:bg-muted/20 transition-colors"
@@ -210,31 +301,16 @@ const PatientsTab = () => {
 
       <div className="flex items-center justify-between mt-3">
         <p className="text-xs text-muted-foreground">
-          {filtered.length === 0
-            ? "0 results"
-            : `${page * ROWS_PER_PAGE + 1}–${Math.min((page + 1) * ROWS_PER_PAGE, filtered.length)} of ${filtered.length}`}
+          {total === 0 ? "0 results" : `${items.length} loaded of ${total}`}
         </p>
-        <div className="flex gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={page === 0}
-            onClick={() => setPage((p) => p - 1)}
-            className="text-foreground h-7 w-7 p-0"
-          >
-            <ChevronLeft className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={page >= totalPages - 1}
-            onClick={() => setPage((p) => p + 1)}
-            className="text-foreground h-7 w-7 p-0"
-          >
-            <ChevronRight className="h-3.5 w-3.5" />
-          </Button>
-        </div>
+        {(isFetching || isFetchingNextPage) && (
+          <div className="text-xs text-muted-foreground inline-flex items-center gap-1.5">
+            <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> Loading...
+          </div>
+        )}
       </div>
+
+      <div ref={sentinelRef} className="h-1 w-full" aria-hidden="true" />
     </div>
   );
 };

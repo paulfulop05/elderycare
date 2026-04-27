@@ -1,5 +1,30 @@
 import type { Appointment } from "@/lib/domain";
 import { appointmentRepository } from "@/lib/data";
+import { enqueueOfflineMutation } from "@/lib/client/offlineSync";
+
+const scheduleAppointmentMutation = `
+  mutation ScheduleAppointment($input: AppointmentInput!) {
+    scheduleAppointment(input: $input) {
+      id
+    }
+  }
+`;
+
+const cancelAppointmentMutation = `
+  mutation CancelAppointment($id: ID!) {
+    cancelAppointment(id: $id) {
+      id
+    }
+  }
+`;
+
+const finishAppointmentMutation = `
+  mutation FinishAppointment($id: ID!) {
+    finishAppointment(id: $id) {
+      id
+    }
+  }
+`;
 
 type AppointmentsListener = () => void;
 
@@ -10,6 +35,8 @@ const notifyAppointmentsChanged = (): void => {
     listener();
   });
 };
+
+const isBrowser = (): boolean => typeof window !== "undefined";
 
 type NewAppointmentInput = {
   doctorName: string;
@@ -27,14 +54,24 @@ export const appointmentService = {
     const updated = appointmentRepository.updateStatus(id, "cancelled");
     if (updated) {
       notifyAppointmentsChanged();
+
+      if (isBrowser()) {
+        void enqueueOfflineMutation(cancelAppointmentMutation, { id });
+      }
     }
+
     return updated;
   },
   finish: (id: string): Appointment | undefined => {
     const updated = appointmentRepository.updateStatus(id, "past");
     if (updated) {
       notifyAppointmentsChanged();
+
+      if (isBrowser()) {
+        void enqueueOfflineMutation(finishAppointmentMutation, { id });
+      }
     }
+
     return updated;
   },
   schedule: (input: NewAppointmentInput): Appointment => {
@@ -48,6 +85,11 @@ export const appointmentService = {
       reason: input.reason,
     });
     notifyAppointmentsChanged();
+
+    if (isBrowser()) {
+      void enqueueOfflineMutation(scheduleAppointmentMutation, { input });
+    }
+
     return created;
   },
   subscribe: (listener: AppointmentsListener): (() => void) => {
@@ -57,4 +99,8 @@ export const appointmentService = {
     };
   },
   getAvailableSlots: (): string[] => appointmentRepository.getAvailableSlots(),
+  replaceAll: (appointments: Appointment[]): void => {
+    appointmentRepository.replaceAll(appointments);
+    notifyAppointmentsChanged();
+  },
 };

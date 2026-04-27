@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -260,6 +260,24 @@ const HealthProgress = () => {
   const [noteErrorsByPatient, setNoteErrorsByPatient] = useState<
     Record<string, string>
   >({});
+
+  useEffect(() => {
+    const unsubscribePatients = patientService.subscribe(() => {
+      setNotesByPatient(noteService.getAllByPatientId());
+    });
+    const unsubscribeAppointments = appointmentService.subscribe(() => {
+      setNotesByPatient(noteService.getAllByPatientId());
+    });
+    const unsubscribeNotes = noteService.subscribe(() => {
+      setNotesByPatient(noteService.getAllByPatientId());
+    });
+
+    return () => {
+      unsubscribePatients();
+      unsubscribeAppointments();
+      unsubscribeNotes();
+    };
+  }, []);
 
   const handleNoteChange = (patientId: string, value: string) => {
     const result = validateDoctorNote(value);

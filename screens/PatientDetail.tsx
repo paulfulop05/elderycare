@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { patientService } from "@/lib/services/patientService";
 import type { HealthMetrics } from "@/lib/domain";
@@ -48,6 +48,20 @@ const PatientDetail = () => {
     patient?.metrics ?? null,
   );
   const [saveAttempted, setSaveAttempted] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = patientService.subscribe(() => {
+      const latest = patientService.getById(id);
+      if (!latest) {
+        return;
+      }
+
+      setPatient(latest);
+      setMetrics(latest.metrics);
+    });
+
+    return unsubscribe;
+  }, [id]);
 
   if (!patient || !metrics) {
     return (
