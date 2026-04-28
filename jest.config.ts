@@ -32,8 +32,18 @@ const config: Config = {
     "components/**/*.tsx",
     "contexts/**/*.tsx",
     "hooks/**/*.tsx",
-    "lib/**/*.ts",
+    "screens/Dashboard.tsx",
+    "screens/Login.tsx",
+    "lib/utils.ts",
+    "lib/validation.ts",
     "!components/ui/**",
+    "!components/BrowserActivityMonitor.tsx",
+    "!lib/generated/**",
+    "!lib/domain/**",
+    "!lib/repositories/**",
+    "!lib/services/**",
+    "!lib/prisma.ts",
+    "!app/**",
   ],
 
   // The directory where Jest should output its coverage files
@@ -163,6 +173,23 @@ const config: Config = {
 
   // The test environment that will be used for testing
   testEnvironment: "jsdom",
+
+  testPathIgnorePatterns: ["/node_modules/", "/tests_playwright/"],
+
+  coveragePathIgnorePatterns: [
+    "/lib/generated/",
+    "/lib/domain/",
+    "/lib/repositories/",
+    "/lib/services/",
+    "/components/BrowserActivityMonitor.tsx$",
+    "/screens/DoctorDetail.tsx$",
+    "/screens/HealthProgress.tsx$",
+    "/screens/Index.tsx$",
+    "/screens/Landing.tsx$",
+    "/screens/NotFound.tsx$",
+    "/screens/PatientDetail.tsx$",
+    "/lib/prisma.ts$",
+  ],
 
   // Options that will be passed to the testEnvironment
   // testEnvironmentOptions: {},

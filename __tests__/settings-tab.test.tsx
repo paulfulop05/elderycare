@@ -65,6 +65,10 @@ describe("SettingsTab", () => {
   it("edits profile and returns to main section", async () => {
     render(<SettingsTab />);
 
+    await waitFor(() => {
+      expect(doctorService.getById).toHaveBeenCalledWith("7");
+    });
+
     fireEvent.click(screen.getByRole("button", { name: /Edit Profile/i }));
 
     await waitFor(() => {
@@ -105,6 +109,10 @@ describe("SettingsTab", () => {
   it("changes password when form is valid", async () => {
     render(<SettingsTab />);
 
+    await waitFor(() => {
+      expect(doctorService.getById).toHaveBeenCalledWith("7");
+    });
+
     fireEvent.click(screen.getByRole("button", { name: /Change Password/i }));
     fireEvent.change(screen.getAllByPlaceholderText("••••••••")[0], {
       target: { value: "oldpass123" },
@@ -130,9 +138,13 @@ describe("SettingsTab", () => {
   it("triggers delete account prototype info", () => {
     render(<SettingsTab />);
 
-    fireEvent.click(screen.getByRole("button", { name: /Delete Account/i }));
-    expect(toast.info).toHaveBeenCalledWith(
-      "Account deletion is a prototype action.",
-    );
+    return waitFor(() => {
+      expect(doctorService.getById).toHaveBeenCalledWith("7");
+    }).then(() => {
+      fireEvent.click(screen.getByRole("button", { name: /Delete Account/i }));
+      expect(toast.info).toHaveBeenCalledWith(
+        "Account deletion is a prototype action.",
+      );
+    });
   });
 });
