@@ -7,6 +7,7 @@ import { mockDataService } from "@/lib/services/mockDataService";
 import { paginate } from "@/lib/api/pagination";
 import { deletePatientMetric } from "@/lib/api/handlers/patients";
 import { fakeDataLoop } from "@/lib/server/fakeDataLoop";
+import { focusedDoctor } from "../server/focusedDoctor";
 import type { Appointment } from "@/lib/domain";
 
 type PaginationArgs = {
@@ -158,6 +159,7 @@ export const appGraphqlSchema = buildSchema(`
     stopMockGeneration: Boolean!
     generateMockBatch(batchSize: Int): Boolean!
     clearMockData: Boolean!
+    setFocusedDoctor(id: ID!): Boolean!
   }
 `);
 
@@ -334,6 +336,10 @@ export const appGraphqlRoot = {
   },
   clearMockData: () => {
     mockDataService.clear();
+    return true;
+  },
+  setFocusedDoctor: ({ id }: { id: string }) => {
+    focusedDoctor.set(id);
     return true;
   },
 };

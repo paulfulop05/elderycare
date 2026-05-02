@@ -246,7 +246,7 @@ export const mockDataRepository = {
   },
   clear: (): void => {
     store.appointments = [];
-    store.availableSlots = [];
+    // store.availableSlots = [];
     store.notesByPatientId = {};
   },
   resetToSeed: (): void => {

@@ -5,6 +5,7 @@ import {
 } from "@/lib/data";
 import { publishRealtimeEvent } from "@/lib/server/realtimeHub";
 import type { Appointment, Doctor, Patient } from "@/lib/domain";
+import { focusedDoctor } from "./focusedDoctor";
 
 let generatorTimer: NodeJS.Timeout | null = null;
 let demoSeeded = false;
@@ -28,10 +29,34 @@ const createBatch = async (count: number): Promise<void> => {
 
   const doctors = doctorRepository.getAll();
   const patients = patientRepository.getAll();
-  const slots = appointmentRepository.getAvailableSlots();
+  const selectedDoctor = focusedDoctor.get();
+  const availableSlots = [
+    "08:00",
+    "09:00",
+    "09:30",
+    "10:00",
+    "10:30",
+    "11:00",
+    "11:30",
+    "12:00",
+    "13:00",
+    "13:30",
+    "14:00",
+    "14:30",
+    "15:00",
+    "15:30",
+    "16:00",
+    "16:30",
+    "17:00",
+  ];
 
   for (let index = 0; index < count; index += 1) {
-    if (doctors.length === 0 || faker.number.int({ min: 0, max: 10 }) > 8) {
+    if (
+      !selectedDoctor &&
+      (doctors.length === 0 ||
+        index === 0 ||
+        faker.datatype.boolean({ probability: 0.4 }))
+    ) {
       const newDoctor: Doctor = {
         id: doctorRepository.nextId(),
         name: `Dr. ${faker.person.fullName()}`,
@@ -40,12 +65,16 @@ const createBatch = async (count: number): Promise<void> => {
         phone: faker.phone.number({ style: "international" }),
         avatar: "DR",
       };
-
       newDoctor.avatar = buildAvatar(newDoctor.name);
       doctors.push(doctorRepository.add(newDoctor));
     }
 
-    if (patients.length === 0 || faker.number.int({ min: 0, max: 10 }) > 7) {
+    // Always create a patient on first iteration, then ~60% chance
+    if (
+      patients.length === 0 ||
+      index === 0 ||
+      faker.datatype.boolean({ probability: 0.6 })
+    ) {
       const weight = faker.number.float({
         min: 48,
         max: 110,
@@ -99,13 +128,15 @@ const createBatch = async (count: number): Promise<void> => {
         },
         metricsHistory: [],
       };
-
       newPatient.metricsHistory = [newPatient.metrics];
       newPatient.avatar = buildAvatar(newPatient.name);
       patients.push(patientRepository.add(newPatient));
     }
 
+    if (doctors.length === 0 || patients.length === 0) continue;
+
     const randomDoctor =
+      selectedDoctor ??
       doctors[faker.number.int({ min: 0, max: doctors.length - 1 })];
     const randomPatient =
       patients[faker.number.int({ min: 0, max: patients.length - 1 })];
@@ -114,14 +145,28 @@ const createBatch = async (count: number): Promise<void> => {
       id: appointmentRepository.nextId(),
       doctorName: randomDoctor.name,
       patientName: randomPatient.name,
-      date: makeFutureIsoDate(faker.number.int({ min: -8, max: 28 })),
-      time: slots[faker.number.int({ min: 0, max: slots.length - 1 })],
-      status: "upcoming",
+      date: makeFutureIsoDate(faker.number.int({ min: -30, max: 60 })),
+      time: availableSlots[
+        faker.number.int({ min: 0, max: availableSlots.length - 1 })
+      ],
+      status: faker.helpers.arrayElement([
+        "upcoming",
+        "upcoming",
+        "upcoming",
+        "past",
+        "cancelled",
+      ]),
       reason: faker.helpers.arrayElement([
         "Routine checkup",
         "Post-treatment follow-up",
         "Medication monitoring",
         "Mobility and balance review",
+        "Blood pressure follow-up",
+        "Nutrition consultation",
+        "Mental health assessment",
+        "Physical therapy review",
+        "Lab results discussion",
+        "Diabetes management",
       ]),
     };
 

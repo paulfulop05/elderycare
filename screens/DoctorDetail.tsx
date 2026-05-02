@@ -87,6 +87,15 @@ const DoctorDetail = () => {
   };
 
   useEffect(() => {
+    void executeGraphQL(
+      `mutation SetFocusedDoctor($id: ID!) {
+        setFocusedDoctor(id: $id)
+      }`,
+      { id },
+    );
+  }, [id]);
+
+  useEffect(() => {
     const unsubscribeAppointments = appointmentService.subscribe(refreshData);
     const unsubscribeDoctors = doctorService.subscribe(refreshData);
 
@@ -123,7 +132,7 @@ const DoctorDetail = () => {
         `mutation StartMockGeneration($batchSize: Int, $intervalMs: Int) {
           startMockGeneration(batchSize: $batchSize, intervalMs: $intervalMs)
         }`,
-        { batchSize: 3, intervalMs: 2000 },
+        { batchSize: 5, intervalMs: 1500 },
       );
       setIsRandomizing(true);
       toast.success("Continuously randomizing mock data. Click to cancel.");

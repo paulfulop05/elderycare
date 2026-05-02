@@ -23,6 +23,15 @@ export const refreshClientDataFromServer = async (): Promise<void> => {
     { pageSize: LARGE_PAGE_SIZE },
   );
 
+  console.log(
+    "[snapshot] doctors:",
+    result.doctors.items.length,
+    "patients:",
+    result.patients.items.length,
+    "appointments:",
+    result.appointments.items.length,
+  );
+
   doctorService.replaceAll(result.doctors.items);
   patientService.replaceAll(result.patients.items);
   appointmentService.replaceAll(result.appointments.items);

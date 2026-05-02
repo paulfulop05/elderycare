@@ -23,6 +23,7 @@ const connect = () => {
   };
 
   socket.onmessage = () => {
+    console.log("[realtime] message received");
     void refreshClientDataFromServer();
   };
 
