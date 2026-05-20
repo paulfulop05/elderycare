@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { DoctorServiceError } from "@/lib/services/server/doctorManagementService";
 import {
+  AuthSessionError,
+  requireSession,
+} from "@/lib/services/server/authSession";
+import {
   getPatientById,
   updatePatientAge,
   updatePatientDoctorNote,
@@ -11,12 +15,20 @@ type Params = {
   params: Promise<{ id: string }>;
 };
 
-export async function GET(_request: Request, context: Params) {
+export async function GET(request: Request, context: Params) {
   try {
+    requireSession(request);
     const { id } = await context.params;
     const patient = await getPatientById(id);
     return NextResponse.json(patient);
   } catch (error) {
+    if (error instanceof AuthSessionError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.statusCode },
+      );
+    }
+
     if (error instanceof DoctorServiceError) {
       return NextResponse.json(
         { error: error.message },
@@ -33,6 +45,7 @@ export async function GET(_request: Request, context: Params) {
 
 export async function PATCH(request: Request, context: Params) {
   try {
+    requireSession(request);
     const { id } = await context.params;
     const body = (await request.json()) as {
       metrics?: Record<string, unknown>;
@@ -60,6 +73,13 @@ export async function PATCH(request: Request, context: Params) {
       { status: 400 },
     );
   } catch (error) {
+    if (error instanceof AuthSessionError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.statusCode },
+      );
+    }
+
     if (error instanceof DoctorServiceError) {
       return NextResponse.json(
         { error: error.message },

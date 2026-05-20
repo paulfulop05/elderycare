@@ -1,16 +1,21 @@
+import { NextResponse } from "next/server";
 import {
   deleteDoctor,
   DoctorServiceError,
   getDoctorById,
 } from "@/lib/services/server/doctorManagementService";
-import { NextResponse } from "next/server";
+import {
+  AuthSessionError,
+  requireRole,
+} from "@/lib/services/server/authSession";
 
 type Params = {
   params: Promise<{ id: string }>;
 };
 
-export async function GET(_request: Request, context: Params) {
+export async function GET(request: Request, context: Params) {
   try {
+    requireRole(request, ["admin"]);
     const { id } = await context.params;
     const doctor = await getDoctorById(id);
 
@@ -22,6 +27,13 @@ export async function GET(_request: Request, context: Params) {
       phoneNumber: doctor.phoneNumber,
     });
   } catch (error) {
+    if (error instanceof AuthSessionError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.statusCode },
+      );
+    }
+
     if (error instanceof DoctorServiceError) {
       return NextResponse.json(
         { error: error.message },
@@ -36,12 +48,20 @@ export async function GET(_request: Request, context: Params) {
   }
 }
 
-export async function DELETE(_request: Request, context: Params) {
+export async function DELETE(request: Request, context: Params) {
   try {
+    requireRole(request, ["admin"]);
     const { id } = await context.params;
     await deleteDoctor(id);
     return NextResponse.json({ ok: true });
   } catch (error) {
+    if (error instanceof AuthSessionError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.statusCode },
+      );
+    }
+
     if (error instanceof DoctorServiceError) {
       return NextResponse.json(
         { error: error.message },

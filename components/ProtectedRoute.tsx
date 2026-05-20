@@ -27,24 +27,22 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     let cancelled = false;
 
     const validateAuth = async () => {
-      if (!authService.isLoggedIn()) {
-        if (!cancelled) {
-          setAuthorized(false);
-        }
-        return;
-      }
-
-      const currentUser = authService.getCurrentUser();
-      if (!currentUser || currentUser.did <= 0) {
-        if (!cancelled) {
-          setAuthorized(true);
-        }
-        return;
-      }
-
       try {
+        const currentUser =
+          typeof authService.hydrateSession === "function"
+            ? await authService.hydrateSession()
+            : authService.getCurrentUser();
+
+        if (!currentUser || currentUser.did <= 0) {
+          if (!cancelled) {
+            setAuthorized(false);
+          }
+          return;
+        }
+
         const response = await fetch(`/api/doctors/${currentUser.did}`, {
           cache: "no-store",
+          credentials: "include",
         });
 
         if (!cancelled) {

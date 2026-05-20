@@ -89,6 +89,40 @@ const writeUser = (user: AuthUser | null): void => {
   window.localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
 };
 
+const persistSession = (user: AuthUser): AuthUser => {
+  writeRole(user.role);
+  writeUser(user);
+  writeLoggedIn(true);
+  return user;
+};
+
+const parseResponse = async <T>(response: Response): Promise<T> => {
+  if (!response.ok) {
+    let message = "Request failed";
+    try {
+      const body = (await response.json()) as { error?: string };
+      if (body.error) {
+        message = body.error;
+      }
+    } catch {
+      // Keep the default message when the response body is not JSON.
+    }
+
+    throw new Error(message);
+  }
+
+  return (await response.json()) as T;
+};
+
+const fetchJson = async <T>(url: string, init?: RequestInit): Promise<T> =>
+  parseResponse<T>(
+    await fetch(url, {
+      cache: "no-store",
+      credentials: "include",
+      ...init,
+    }),
+  );
+
 export const authService = {
   loginAs: (input: UserRole | AuthUser): void => {
     const user: AuthUser =
@@ -101,14 +135,69 @@ export const authService = {
           }
         : input;
 
-    writeRole(user.role);
-    writeUser(user);
-    writeLoggedIn(true);
+    persistSession(user);
+  },
+  register: async (input: {
+    name: string;
+    age: number;
+    email: string;
+    phone: string;
+    password: string;
+    role: UserRole;
+  }): Promise<AuthUser> => {
+    const user = await fetchJson<AuthUser>("/api/auth/register", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: input.name,
+        age: input.age,
+        email: input.email,
+        phoneNumber: input.phone,
+        password: input.password,
+        role: input.role,
+      }),
+    });
+
+    return persistSession(user);
+  },
+  hydrateSession: async (): Promise<AuthUser | null> => {
+    try {
+      const user = await fetchJson<AuthUser>("/api/auth/me");
+      return persistSession(user);
+    } catch {
+      return null;
+    }
+  },
+  touchSession: async (): Promise<boolean> => {
+    if (!readLoggedIn()) {
+      return false;
+    }
+
+    try {
+      const user = await fetchJson<AuthUser>("/api/auth/heartbeat", {
+        method: "POST",
+      });
+
+      persistSession(user);
+      return true;
+    } catch {
+      authService.logout();
+      return false;
+    }
   },
   logout: (): void => {
     writeRole("doctor");
     writeUser(null);
     writeLoggedIn(false);
+    if (typeof window !== "undefined" && typeof fetch === "function") {
+      void fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+        cache: "no-store",
+      }).catch(() => undefined);
+    }
   },
   isLoggedIn: (): boolean => readLoggedIn(),
   getUserRole: (): UserRole => readRole(),

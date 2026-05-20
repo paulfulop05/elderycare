@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import {
-  authenticateDoctorLogin,
+  createDoctor,
   DoctorServiceError,
 } from "@/lib/services/server/doctorManagementService";
 import { createSessionResponse } from "@/lib/services/server/authSession";
@@ -8,9 +8,21 @@ import { createSessionResponse } from "@/lib/services/server/authSession";
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as Record<string, unknown>;
-    const user = await authenticateDoctorLogin(body);
+    const user = await createDoctor({
+      ...body,
+      role: body.role === "admin",
+    });
 
-    return createSessionResponse(request, user);
+    return createSessionResponse(
+      request,
+      {
+        did: user.did,
+        name: user.name,
+        email: user.email,
+        role: user.role ? "admin" : "doctor",
+      },
+      201,
+    );
   } catch (error) {
     if (error instanceof DoctorServiceError) {
       return NextResponse.json(
@@ -19,6 +31,6 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json({ error: "Failed to log in." }, { status: 500 });
+    return NextResponse.json({ error: "Failed to register." }, { status: 500 });
   }
 }

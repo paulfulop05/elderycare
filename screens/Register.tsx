@@ -7,28 +7,35 @@ import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { validateLoginForm } from "@/lib/validation";
+import { validateDoctorForm } from "@/lib/validation";
 import { toast } from "sonner";
 import Logo from "@/components/Logo";
 import { authService } from "@/lib/services/client/authService";
-import { doctorService } from "@/lib/services/client/doctorService";
 import type { UserRole } from "@/lib/domain";
 
-const Login = () => {
+const Register = () => {
   const router = useRouter();
   const [hasMounted, setHasMounted] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [name, setName] = useState("");
+  const [age, setAge] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [role, setRole] = useState<UserRole>("doctor");
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [touched, setTouched] = useState<{
-    email?: boolean;
-    password?: boolean;
-  }>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
 
-  const validation = validateLoginForm({ email, password });
+  const validation = validateDoctorForm({
+    name,
+    age,
+    email,
+    phone,
+    password,
+    confirmPassword,
+  });
 
   useEffect(() => {
     setHasMounted(true);
@@ -40,32 +47,36 @@ const Login = () => {
     }
   }, [hasMounted, router]);
 
-  const shouldShowError = (field: "email" | "password") =>
+  const shouldShowError = (field: string) =>
     submitAttempted || Boolean(touched[field]);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const handleRegister = async (event: React.FormEvent) => {
+    event.preventDefault();
     setSubmitAttempted(true);
+
     if (!validation.isValid) {
-      toast.error("Please fix the highlighted login fields.");
+      toast.error("Please fix the highlighted registration fields.");
       return;
     }
 
     try {
       setIsSubmitting(true);
-      const user = await doctorService.login(
-        validation.sanitized.email,
-        password,
+      const user = await authService.register({
+        name: validation.sanitized.name,
+        age: validation.sanitized.age,
+        email: validation.sanitized.email,
+        phone: validation.sanitized.phone,
+        password: validation.sanitized.password,
         role,
-      );
+      });
 
-      setEmail(validation.sanitized.email);
       authService.loginAs(user);
       router.push("/dashboard");
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Login failed. Try again.";
+        error instanceof Error
+          ? error.message
+          : "Registration failed. Try again.";
       toast.error(message);
     } finally {
       setIsSubmitting(false);
@@ -88,7 +99,7 @@ const Login = () => {
             <span className="font-semibold text-accent">care</span>
           </h1>
           <p className="text-white/40 dark:text-muted-foreground text-sm font-light">
-            Caring for those who once cared for us.
+            Secure access for care teams.
           </p>
         </motion.div>
       </div>
@@ -108,13 +119,79 @@ const Login = () => {
           </div>
 
           <h2 className="font-display text-2xl font-semibold text-foreground mb-1">
-            Welcome back
+            Create account
           </h2>
           <p className="text-muted-foreground text-sm mb-6 font-light">
-            Log in to your account
+            Register to use the platform
           </p>
 
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={handleRegister} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="name" className="text-xs text-foreground">
+                Full name
+              </Label>
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                onBlur={() => setTouched((prev) => ({ ...prev, name: true }))}
+                className="h-9 text-sm bg-muted border-border text-foreground placeholder:text-muted-foreground"
+              />
+              {shouldShowError("name") && validation.errors.name && (
+                <p className="text-xs text-destructive">
+                  {validation.errors.name}
+                </p>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="age" className="text-xs text-foreground">
+                  Age
+                </Label>
+                <Input
+                  id="age"
+                  type="number"
+                  value={age}
+                  onChange={(e) => setAge(e.target.value)}
+                  onBlur={() => setTouched((prev) => ({ ...prev, age: true }))}
+                  className="h-9 text-sm bg-muted border-border text-foreground placeholder:text-muted-foreground"
+                />
+                {shouldShowError("age") && validation.errors.age && (
+                  <p className="text-xs text-destructive">
+                    {validation.errors.age}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-foreground">Role</Label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setRole("doctor")}
+                    className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      role === "doctor"
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/70"
+                    }`}
+                  >
+                    Doctor
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRole("admin")}
+                    className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      role === "admin"
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/70"
+                    }`}
+                  >
+                    Admin
+                  </button>
+                </div>
+              </div>
+            </div>
+
             <div className="space-y-1.5">
               <Label htmlFor="email" className="text-xs text-foreground">
                 Email
@@ -122,7 +199,6 @@ const Login = () => {
               <Input
                 id="email"
                 type="email"
-                placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 onBlur={() => setTouched((prev) => ({ ...prev, email: true }))}
@@ -134,6 +210,25 @@ const Login = () => {
                 </p>
               )}
             </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="phone" className="text-xs text-foreground">
+                Phone number
+              </Label>
+              <Input
+                id="phone"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                onBlur={() => setTouched((prev) => ({ ...prev, phone: true }))}
+                className="h-9 text-sm bg-muted border-border text-foreground placeholder:text-muted-foreground"
+              />
+              {shouldShowError("phone") && validation.errors.phone && (
+                <p className="text-xs text-destructive">
+                  {validation.errors.phone}
+                </p>
+              )}
+            </div>
+
             <div className="space-y-1.5">
               <Label htmlFor="password" className="text-xs text-foreground">
                 Password
@@ -142,7 +237,6 @@ const Login = () => {
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   onBlur={() =>
@@ -168,49 +262,48 @@ const Login = () => {
                 </p>
               )}
             </div>
+
             <div className="space-y-1.5">
-              <Label className="text-xs text-foreground">Log in as</Label>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setRole("doctor")}
-                  className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                    role === "doctor"
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/70"
-                  }`}
-                >
-                  Doctor
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRole("admin")}
-                  className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                    role === "admin"
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/70"
-                  }`}
-                >
-                  Admin
-                </button>
-              </div>
+              <Label
+                htmlFor="confirmPassword"
+                className="text-xs text-foreground"
+              >
+                Confirm password
+              </Label>
+              <Input
+                id="confirmPassword"
+                type={showPassword ? "text" : "password"}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                onBlur={() =>
+                  setTouched((prev) => ({ ...prev, confirmPassword: true }))
+                }
+                className="h-9 text-sm bg-muted border-border text-foreground placeholder:text-muted-foreground"
+              />
+              {shouldShowError("confirmPassword") &&
+                validation.errors.confirmPassword && (
+                  <p className="text-xs text-destructive">
+                    {validation.errors.confirmPassword}
+                  </p>
+                )}
             </div>
+
             <Button
               type="submit"
               disabled={!validation.isValid || isSubmitting}
               className="w-full bg-accent text-accent-foreground font-medium hover:bg-accent/80 hover:shadow-md active:scale-[0.97] transition-all duration-200"
             >
-              {isSubmitting ? "Logging in..." : "Log In"}
+              {isSubmitting ? "Creating account..." : "Create account"}
             </Button>
           </form>
 
           <p className="mt-5 text-center text-xs text-muted-foreground">
-            New account?{" "}
+            Already have an account?{" "}
             <a
-              href="/register"
+              href="/login"
               className="font-medium text-accent hover:underline"
             >
-              Create one here
+              Log in
             </a>
           </p>
         </motion.div>
@@ -219,4 +312,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default Register;

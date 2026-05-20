@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { browserCookieMonitorService } from "@/lib/services/client/browserCookieMonitorService";
+import { authService } from "@/lib/services/client/authService";
 
 const EVENT_THROTTLE_MS = 2000;
 
@@ -31,18 +32,27 @@ export default function BrowserActivityMonitor() {
     }
 
     browserCookieMonitorService.recordActivity("page_view", pathname);
+    if (authService.isLoggedIn()) {
+      void authService.touchSession();
+    }
   }, [pathname]);
 
   useEffect(() => {
     const handleClick = (): void => {
       if (shouldCaptureEvent(lastCapturedAt, "click")) {
         browserCookieMonitorService.recordActivity("click");
+        if (authService.isLoggedIn()) {
+          void authService.touchSession();
+        }
       }
     };
 
     const handleKeyDown = (): void => {
       if (shouldCaptureEvent(lastCapturedAt, "keydown")) {
         browserCookieMonitorService.recordActivity("keydown");
+        if (authService.isLoggedIn()) {
+          void authService.touchSession();
+        }
       }
     };
 

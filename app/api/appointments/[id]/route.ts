@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { DoctorServiceError } from "@/lib/services/server/doctorManagementService";
 import {
+  AuthSessionError,
+  requireRole,
+  requireSession,
+} from "@/lib/services/server/authSession";
+import {
   deleteAppointment,
   updateAppointmentStatus,
 } from "@/lib/services/server/appointmentManagementService";
@@ -11,6 +16,7 @@ type Params = {
 
 export async function PATCH(request: Request, context: Params) {
   try {
+    requireSession(request);
     const { id } = await context.params;
     const body = (await request.json()) as { status?: unknown };
 
@@ -21,6 +27,13 @@ export async function PATCH(request: Request, context: Params) {
     const appointment = await updateAppointmentStatus(id, body.status);
     return NextResponse.json(appointment);
   } catch (error) {
+    if (error instanceof AuthSessionError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.statusCode },
+      );
+    }
+
     if (error instanceof DoctorServiceError) {
       return NextResponse.json(
         { error: error.message },
@@ -35,12 +48,20 @@ export async function PATCH(request: Request, context: Params) {
   }
 }
 
-export async function DELETE(_request: Request, context: Params) {
+export async function DELETE(request: Request, context: Params) {
   try {
+    requireRole(request, ["admin"]);
     const { id } = await context.params;
     await deleteAppointment(id);
     return new NextResponse(null, { status: 204 });
   } catch (error) {
+    if (error instanceof AuthSessionError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.statusCode },
+      );
+    }
+
     if (error instanceof DoctorServiceError) {
       return NextResponse.json(
         { error: error.message },

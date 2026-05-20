@@ -27,6 +27,24 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+To test secure auth and encrypted traffic locally, run the HTTPS dev server instead:
+
+```bash
+npm run dev:https
+```
+
+Then open [https://localhost:3000](https://localhost:3000) and accept the browser certificate warning if one appears.
+
+To test the app across a LAN, start the server machine with the HTTPS dev server and open the site from the other machine using the server machine's LAN IP, for example `https://192.168.1.20:3000`.
+
+### What to verify
+
+- After login or register, open DevTools → Network and inspect the response headers for `/api/auth/login` or `/api/auth/register`. You should see a `Set-Cookie` header for `ec_session`.
+- Open DevTools → Application or Storage → Cookies and confirm `ec_session` is present, `HttpOnly`, and `Secure` when you are on HTTPS.
+- Open DevTools → Network and confirm the request URLs are `https://...`, not `http://...`.
+- Leave the dashboard idle for about 15 minutes, then refresh. The session should expire and send you back to `/login`.
+- If you keep interacting with the page, the heartbeat request should keep the session alive.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
