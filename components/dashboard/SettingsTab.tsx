@@ -14,6 +14,7 @@ import { doctorService } from "@/lib/services/client/doctorService";
 
 const SettingsTab = () => {
   const currentUser = authService.getCurrentUser();
+  const currentUserId = currentUser?.did ?? 0;
   const [section, setSection] = useState<"main" | "profile" | "password">(
     "main",
   );
@@ -28,12 +29,12 @@ const SettingsTab = () => {
   const [passwordAttempted, setPasswordAttempted] = useState(false);
 
   useEffect(() => {
-    if (!currentUser || currentUser.did <= 0) {
+    if (currentUserId <= 0) {
       return;
     }
 
     void doctorService
-      .getById(String(currentUser.did))
+      .getById(String(currentUserId))
       .then((doctor) => {
         if (!doctor) {
           return;
@@ -47,7 +48,7 @@ const SettingsTab = () => {
       .catch(() => {
         toast.error("Failed to load profile settings.");
       });
-  }, [currentUser]);
+  }, [currentUserId]);
 
   const profileValidation = useMemo(() => {
     const errors: {
