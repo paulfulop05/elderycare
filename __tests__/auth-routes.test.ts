@@ -1,15 +1,11 @@
 /** @jest-environment node */
 
 import { buildSessionToken } from "@/lib/services/server/authSession";
-import {
-  authenticateDoctorLogin,
-  createDoctor,
-} from "@/lib/services/server/doctorManagementService";
+import { authenticateDoctorLogin } from "@/lib/services/server/doctorManagementService";
 import { POST as heartbeatPOST } from "@/app/api/auth/heartbeat/route";
 import { POST as loginPOST } from "@/app/api/auth/login/route";
 import { POST as logoutPOST } from "@/app/api/auth/logout/route";
 import { GET as meGET } from "@/app/api/auth/me/route";
-import { POST as registerPOST } from "@/app/api/auth/register/route";
 
 jest.mock("@/lib/services/server/doctorManagementService", () => ({
   __esModule: true,
@@ -58,38 +54,6 @@ describe("auth routes", () => {
       name: "Dr. Alice",
       email: "alice@elderycare.com",
       role: "doctor",
-    });
-  });
-
-  it("registers a user and sets a session cookie", async () => {
-    (createDoctor as jest.Mock).mockResolvedValue({
-      did: 9,
-      name: "Dr. Maria",
-      email: "maria@elderycare.com",
-      role: true,
-    });
-
-    const response = await registerPOST(
-      new Request("http://localhost/api/auth/register", {
-        method: "POST",
-        body: JSON.stringify({
-          name: "Dr. Maria",
-          age: 40,
-          email: "maria@elderycare.com",
-          phoneNumber: "+1 555 0101",
-          password: "password123",
-          role: true,
-        }),
-      }),
-    );
-
-    expect(response.status).toBe(201);
-    expect(response.headers.get("set-cookie")).toContain("ec_session=");
-    await expect(response.json()).resolves.toEqual({
-      did: 9,
-      name: "Dr. Maria",
-      email: "maria@elderycare.com",
-      role: "admin",
     });
   });
 

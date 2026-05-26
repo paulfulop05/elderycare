@@ -27,7 +27,7 @@ export class AuthSessionError extends Error {
 }
 
 const SESSION_COOKIE_NAME = "ec_session";
-const SESSION_IDLE_TIMEOUT_MS = 0.3 * 60 * 1000;
+const SESSION_IDLE_TIMEOUT_MS = 15 * 60 * 1000;
 const SESSION_ABSOLUTE_TIMEOUT_MS = 8 * 60 * 60 * 1000;
 const DEFAULT_SECRET = "eldery-care-dev-session-secret";
 

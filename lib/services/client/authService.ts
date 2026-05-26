@@ -137,31 +137,6 @@ export const authService = {
 
     persistSession(user);
   },
-  register: async (input: {
-    name: string;
-    age: number;
-    email: string;
-    phone: string;
-    password: string;
-    role: UserRole;
-  }): Promise<AuthUser> => {
-    const user = await fetchJson<AuthUser>("/api/auth/register", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        name: input.name,
-        age: input.age,
-        email: input.email,
-        phoneNumber: input.phone,
-        password: input.password,
-        role: input.role,
-      }),
-    });
-
-    return persistSession(user);
-  },
   hydrateSession: async (): Promise<AuthUser | null> => {
     try {
       const user = await fetchJson<AuthUser>("/api/auth/me");

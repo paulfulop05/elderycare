@@ -39,7 +39,7 @@ To test the app across a LAN, start the server machine with the HTTPS dev server
 
 ### What to verify
 
-- After login or register, open DevTools → Network and inspect the response headers for `/api/auth/login` or `/api/auth/register`. You should see a `Set-Cookie` header for `ec_session`.
+- After login, open DevTools → Network and inspect the response headers for `/api/auth/login`. You should see a `Set-Cookie` header for `ec_session`.
 - Open DevTools → Application or Storage → Cookies and confirm `ec_session` is present, `HttpOnly`, and `Secure` when you are on HTTPS.
 - Open DevTools → Network and confirm the request URLs are `https://...`, not `http://...`.
 - Leave the dashboard idle for about 15 minutes, then refresh. The session should expire and send you back to `/login`.

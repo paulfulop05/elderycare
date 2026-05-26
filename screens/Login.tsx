@@ -203,16 +203,6 @@ const Login = () => {
               {isSubmitting ? "Logging in..." : "Log In"}
             </Button>
           </form>
-
-          <p className="mt-5 text-center text-xs text-muted-foreground">
-            New account?{" "}
-            <a
-              href="/register"
-              className="font-medium text-accent hover:underline"
-            >
-              Create one here
-            </a>
-          </p>
         </motion.div>
       </div>
     </div>
