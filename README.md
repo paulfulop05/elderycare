@@ -1,65 +1,44 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# elderyCare
 
-## Architecture
+elderyCare is a healthcare coordination platform designed to make communication and day-to-day care easier for elderly people and residential care hospitals. It gives geriatric doctors and care teams a shared place to organize appointments, manage patient information, monitor health progress, and coordinate care.
 
-The frontend is arranged so a backend can be added later without rewriting the UI:
+The application includes role-based access for doctors and administrators, patient and doctor management, appointment scheduling, health metrics, and a responsive dashboard.
 
-- `lib/domain` holds shared entity and transport types.
-- `lib/data` defines repository contracts and the current local data boundary.
-- `lib/data/mock` keeps seed data and faker generators isolated from the UI.
-- `lib/services` contains the app-facing operations used by screens and components.
+## Live Application
 
-When you add a backend later, the cleanest swap point is the `lib/data` layer. Keep the UI and services stable, then replace the current repository implementation with an API-backed one.
+Visit the hosted application at [elderycare.vercel.app](https://elderycare.vercel.app/).
+
+## Tech Stack
+
+- Next.js and React with TypeScript
+- Tailwind CSS and Radix UI components
+- Prisma with PostgreSQL/Neon support
+- Jest and Playwright for testing
 
 ## Getting Started
 
-First, run the development server:
+Install dependencies and run the development server:
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-To test secure auth and encrypted traffic locally, run the HTTPS dev server instead:
+For local HTTPS testing, run:
 
 ```bash
 npm run dev:https
 ```
 
-Then open [https://localhost:3000](https://localhost:3000) and accept the browser certificate warning if one appears.
+Then open [https://localhost:3000](https://localhost:3000) and accept the browser certificate warning if prompted.
 
-To test the app across a LAN, start the server machine with the HTTPS dev server and open the site from the other machine using the server machine's LAN IP, for example `https://192.168.1.20:3000`.
+## Scripts
 
-### What to verify
-
-- After login, open DevTools → Network and inspect the response headers for `/api/auth/login`. You should see a `Set-Cookie` header for `ec_session`.
-- Open DevTools → Application or Storage → Cookies and confirm `ec_session` is present, `HttpOnly`, and `Secure` when you are on HTTPS.
-- Open DevTools → Network and confirm the request URLs are `https://...`, not `http://...`.
-- Leave the dashboard idle for about 15 minutes, then refresh. The session should expire and send you back to `/login`.
-- If you keep interacting with the page, the heartbeat request should keep the session alive.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run lint       # Check code quality
+npm test           # Run Jest tests
+npm run build      # Create a production build
+npm start          # Start the production server
+```
